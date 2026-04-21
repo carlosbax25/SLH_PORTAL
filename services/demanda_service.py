@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from copy import deepcopy
 from docx import Document
 from docx.shared import Pt
+from services.drive_service import upload_to_drive, get_drive_link
 from docx.oxml.ns import qn
 
 # Zona horaria Colombia (UTC-5)
@@ -344,6 +345,11 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
 
     # Track
     tracking = _load_tracking()
+    
+    # Upload to Google Drive
+    drive_id = upload_to_drive(filepath, filename)
+    drive_link = get_drive_link(drive_id) if drive_id else ""
+    
     tracking[cedula] = {
         "propietario": propietario,
         "conjunto": conjunto,
@@ -353,6 +359,8 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
         "hechos": hechos_data or [],
         "pretensiones": pretensiones_data or [],
         "medida_cautelar": medida_text,
+        "drive_id": drive_id or "",
+        "drive_link": drive_link,
     }
     _save_tracking(tracking)
 

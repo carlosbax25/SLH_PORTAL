@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .env
+credentials.json
 generated_demandas/*.docx
 generated_demandas/_tracking.json
 .kiro/
