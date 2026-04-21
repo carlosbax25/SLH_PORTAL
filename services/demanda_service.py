@@ -9,6 +9,7 @@ from copy import deepcopy
 from docx import Document
 from docx.shared import Pt
 from services.drive_service import upload_to_drive, get_drive_link
+from services.sheets_tracking import load_tracking, save_tracking_entry
 from docx.oxml.ns import qn
 
 # Zona horaria Colombia (UTC-5)
@@ -17,7 +18,6 @@ COL_TZ = timezone(timedelta(hours=-5))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(BASE_DIR, "static", "MODELO DE DEMANDA PARA AUTOMATIZAR.docx")
 GENERATED_DIR = os.path.join(BASE_DIR, "generated_demandas")
-TRACKING_FILE = os.path.join(GENERATED_DIR, "_tracking.json")
 
 _TEMP_TEMPLATE = os.path.join(tempfile.gettempdir(), "slh_demanda_modelo_v3.docx")
 shutil.copy2(TEMPLATE_PATH, _TEMP_TEMPLATE)
@@ -42,28 +42,16 @@ CORREOS_CONJUNTO = {
 }
 
 
-def _load_tracking() -> dict:
-    if os.path.exists(TRACKING_FILE):
-        with open(TRACKING_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def _save_tracking(data: dict):
-    with open(TRACKING_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
 def is_demanda_generated(cedula: str) -> bool:
-    return cedula in _load_tracking()
+    return cedula in load_tracking()
 
 
 def get_demanda_info(cedula: str) -> dict | None:
-    return _load_tracking().get(cedula)
+    return load_tracking().get(cedula)
 
 
 def get_all_generated() -> dict:
-    return _load_tracking()
+    return load_tracking()
 
 
 def _get_correo_conjunto(conjunto: str) -> str:
@@ -343,14 +331,11 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     filepath = os.path.join(GENERATED_DIR, filename)
     doc.save(filepath)
 
-    # Track
-    tracking = _load_tracking()
-    
-    # Upload to Google Drive
+    # Track in Google Sheets
     drive_id = upload_to_drive(filepath, filename)
     drive_link = get_drive_link(drive_id) if drive_id else ""
-    
-    tracking[cedula] = {
+
+    save_tracking_entry(cedula, {
         "propietario": propietario,
         "conjunto": conjunto,
         "filename": filename,
@@ -361,7 +346,6 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
         "medida_cautelar": medida_text,
         "drive_id": drive_id or "",
         "drive_link": drive_link,
-    }
-    _save_tracking(tracking)
+    })
 
     return filepath

@@ -7,7 +7,8 @@ from googleapiclient.http import MediaFileUpload
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLDER_ID = "1Bt4tE6qttIKuUv-iSwz5RRpNFfhQIiqE"
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SCOPES = ["https://www.googleapis.com/auth/drive.file",
+          "https://www.googleapis.com/auth/spreadsheets"]
 
 
 def _get_credentials():
