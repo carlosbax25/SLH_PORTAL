@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+generated_demandas/*.docx
+generated_demandas/_tracking.json
+.kiro/

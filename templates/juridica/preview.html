@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Vista Previa - {{ filename }}{% endblock %}
+
+{% block content %}
+<section class="detail-hero">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('juridica.demandas') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver a Demandas
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas fa-file-word"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">Vista Previa</h1>
+                <span class="detail-status" style="background: #28a745;">{{ filename }}</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="detail-content" style="text-align: center;">
+    <div class="preview-actions">
+        <a href="{{ url_for('juridica.descargar', filename=filename) }}" class="btn-primary">
+            <i class="fas fa-download"></i> Descargar Documento
+        </a>
+        <p class="preview-hint">
+            Descarga el documento Word para revisarlo y editarlo antes de guardarlo.
+        </p>
+    </div>
+</section>
+{% endblock %}

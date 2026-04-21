@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Jurídica - SLH Automatización{% endblock %}
+
+{% block content %}
+<section class="detail-hero">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('process.detail', slug='juridica') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver a Jurídica
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas fa-gavel"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">Módulo Jurídica</h1>
+                <span class="detail-status" style="background: #28a745;">Activo</span>
+            </div>
+        </div>
+        <p class="detail-description">Panel de opciones para procesos jurídicos automatizados</p>
+    </div>
+</section>
+
+<section class="detail-content">
+    <div class="section-header">
+        <h2 class="section-title">Opciones Disponibles</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="options-grid">
+        <a href="{{ url_for('juridica.demandas') }}" class="option-card">
+            <div class="option-icon"><i class="fas fa-file-contract"></i></div>
+            <h3 class="option-title">Demandas / Condominios</h3>
+            <p class="option-desc">Generar documentos de demanda para clientes en estado jurídico desde Google Sheets</p>
+            <span class="option-arrow"><i class="fas fa-arrow-right"></i></span>
+        </a>
+    </div>
+</section>
+{% endblock %}

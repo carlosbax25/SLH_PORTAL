@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SLH Automatización{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-brand">
+                <img src="{{ url_for('static', filename='LOGO-SLH.png') }}" alt="SLH" class="nav-logo">
+                <span class="nav-title">Centro de Automatización</span>
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('main.dashboard') }}" class="nav-link active">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">
+        <div class="footer-container">
+            <p>&copy; 2026 SLH &mdash; Centro de Automatización de Procesos</p>
+        </div>
+    </footer>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

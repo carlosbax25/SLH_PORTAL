@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+{% block title %}Demandas / Condominios - SLH{% endblock %}
+
+{% block content %}
+<section class="detail-hero">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('juridica.index') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver a Jurídica
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas fa-file-contract"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">Demandas / Condominios</h1>
+                <span class="detail-status" style="background: #28a745;">
+                    {{ clients|length }} clientes en estado JURÍDICA
+                </span>
+            </div>
+        </div>
+        <p class="detail-description">
+            Datos sincronizados desde Google Sheets. Genera documentos de demanda por cliente.
+        </p>
+    </div>
+</section>
+
+<section class="detail-content">
+    <!-- Real Metrics -->
+    <div class="detail-grid" style="margin-bottom: 2rem;">
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-users"></i></div>
+            <h3>Total Clientes</h3>
+            <div class="detail-big-number">{{ metrics.total }}</div>
+        </div>
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-file-alt"></i></div>
+            <h3>Demandas Generadas</h3>
+            <div class="detail-big-number">{{ metrics.generadas }}</div>
+        </div>
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-clock"></i></div>
+            <h3>Pendientes</h3>
+            <div class="detail-big-number">{{ metrics.pendientes }}</div>
+        </div>
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-building"></i></div>
+            <h3>Conjuntos</h3>
+            <div class="detail-big-number">{{ metrics.conjuntos }}</div>
+        </div>
+    </div>
+    <!-- Search & Filter -->
+    <div class="table-controls">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, cédula o conjunto...">
+        </div>
+        <div class="filter-pills">
+            <button class="pill active" data-filter="all">Todos ({{ clients|length }})</button>
+            <button class="pill" data-filter="pending">Sin Demanda</button>
+            <button class="pill" data-filter="generated">Con Demanda</button>
+        </div>
+    </div>
+
+    <!-- Client Table -->
+    <div class="table-wrapper">
+        <table class="data-table" id="clientsTable">
+            <thead>
+                <tr>
+                    <th>Cédula</th>
+                    <th>Propietario</th>
+                    <th>Conjunto</th>
+                    <th>Torre</th>
+                    <th>Apto</th>
+                    <th>Mora</th>
+                    <th>Estado Demanda</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clients %}
+                <tr data-status="{{ 'generated' if c.demanda_generada else 'pending' }}"
+                    data-cedula="{{ c.cedula }}"
+                    data-propietario="{{ c.propietario }}"
+                    data-conjunto="{{ c.conjunto }}"
+                    data-torre="{{ c.torre }}"
+                    data-apto="{{ c.apto }}"
+                    data-mora="{{ c.mora }}"
+                    data-correo="{{ c.correo }}">
+                    <td>{{ c.cedula }}</td>
+                    <td class="name-cell">{{ c.propietario }}</td>
+                    <td>{{ c.conjunto }}</td>
+                    <td>{{ c.torre }}</td>
+                    <td>{{ c.apto }}</td>
+                    <td class="mora-cell">{{ c.mora }}</td>
+                    <td>
+                        {% if c.demanda_generada %}
+                        <span class="badge badge-success">
+                            <i class="fas fa-check"></i> Generada ({{ c.demanda_fecha }})
+                        </span>
+                        {% else %}
+                        <span class="badge badge-pending">
+                            <i class="fas fa-clock"></i> Pendiente
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                        {% if c.demanda_generada %}
+                        <a href="{{ url_for('juridica.descargar', filename=c.demanda_filename) }}"
+                           class="btn-sm btn-gold" title="Descargar">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        <button class="btn-sm btn-outline" title="Regenerar"
+                                onclick="openModal(this.closest('tr'))">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        {% else %}
+                        <button class="btn-sm btn-gold" title="Generar Demanda"
+                                onclick="openModal(this.closest('tr'))">
+                            <i class="fas fa-file-alt"></i> Generar
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal for generating demanda -->
+    <div class="modal-overlay" id="demandaModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-contract"></i> Generar Demanda</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info">
+                    <div class="info-row">
+                        <span class="info-label">Propietario:</span>
+                        <span class="info-value" id="modalPropietario"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cédula:</span>
+                        <span class="info-value" id="modalCedula"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Conjunto:</span>
+                        <span class="info-value" id="modalConjunto"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Torre / Apto:</span>
+                        <span class="info-value" id="modalUbicacion"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mora Total:</span>
+                        <span class="info-value gold" id="modalMora"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Correo:</span>
+                        <span class="info-value" id="modalCorreo"></span>
+                    </div>
+                </div>
+
+                <h3 class="modal-subtitle"><i class="fas fa-balance-scale"></i> Hechos — Concepto De La Obligación</h3>
+                <p class="modal-hint">Tabla que aparecerá en la sección de HECHOS del documento.</p>
+                <table class="obligation-table" id="hechosTable">
+                    <thead>
+                        <tr><th>Concepto</th><th>Valor ($)</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Cuotas ordinarias de administración"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'hechosTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Intereses de mora"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'hechosTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Cuotas extraordinarias"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'hechosTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Gastos de cobranza"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'hechosTable')">&times;</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn-add-row" onclick="addRow('hechosTable')">
+                    <i class="fas fa-plus"></i> Agregar concepto
+                </button>
+
+                <div style="margin-top: 1.5rem;"></div>
+
+                <h3 class="modal-subtitle"><i class="fas fa-gavel"></i> Pretensiones — Concepto De La Obligación</h3>
+                <p class="modal-hint">Tabla que aparecerá en la sección de PRETENSIONES del documento.</p>
+                <table class="obligation-table" id="pretensionesTable">
+                    <thead>
+                        <tr><th>Concepto</th><th>Valor ($)</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Cuotas ordinarias de administración"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'pretensionesTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Intereses de mora"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'pretensionesTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Cuotas extraordinarias"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'pretensionesTable')">&times;</button></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" class="obl-input" value="Gastos de cobranza"></td>
+                            <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this, 'pretensionesTable')">&times;</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn-add-row" onclick="addRow('pretensionesTable')">
+                    <i class="fas fa-plus"></i> Agregar concepto
+                </button>
+
+                <div style="margin-top: 1.5rem;"></div>
+
+                <h3 class="modal-subtitle"><i class="fas fa-lock"></i> Medida Cautelar</h3>
+                <p class="modal-hint">Escriba el texto completo de la medida cautelar (embargo de inmueble, salarios, vehículos, etc.)</p>
+                <div class="modal-info">
+                    <textarea class="obl-input" id="inputMedidaCautelar" rows="4" 
+                        style="width:100%; resize:vertical;"
+                        placeholder="Ej: Embargo y secuestro del bien inmueble distinguido con FMI No. 060-17644, de propiedad de la parte demandada, ubicado en..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn-generate" id="btnGenerate" onclick="generateDemanda()">
+                    <i class="fas fa-file-alt"></i> Generar Documento
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const prevData = {
+    {% for c in clients %}
+    {% if c.demanda_generada %}
+    "{{ c.cedula }}": {
+        hechos: {{ c.prev_hechos|default('[]')|safe }},
+        pretensiones: {{ c.prev_pretensiones|default('[]')|safe }},
+        medida: "{{ c.prev_medida|default('')|replace('"', '\\"') }}"
+    },
+    {% endif %}
+    {% endfor %}
+};
+</script>
+<script>
+let currentRow = null;
+
+function openModal(tr) {
+    currentRow = tr;
+    document.getElementById('modalPropietario').textContent = tr.dataset.propietario;
+    document.getElementById('modalCedula').textContent = tr.dataset.cedula;
+    document.getElementById('modalConjunto').textContent = tr.dataset.conjunto;
+    document.getElementById('modalUbicacion').textContent = `Torre ${tr.dataset.torre}, Apto ${tr.dataset.apto}`;
+    document.getElementById('modalMora').textContent = tr.dataset.mora;
+    document.getElementById('modalCorreo').textContent = tr.dataset.correo || 'No registrado';
+
+    // Load previous data if regenerating
+    const cedula = tr.dataset.cedula;
+    const prev = prevData[cedula] || {};
+    const prevHechos = prev.hechos || [];
+    const prevPretensiones = prev.pretensiones || [];
+    const prevMedida = prev.medida || '';
+
+    loadTableData('hechosTable', prevHechos);
+    loadTableData('pretensionesTable', prevPretensiones);
+    document.getElementById('inputMedidaCautelar').value = prevMedida;
+
+    document.getElementById('demandaModal').classList.add('active');
+}
+
+function loadTableData(tableId, data) {
+    const tbody = document.querySelector('#' + tableId + ' tbody');
+    const defaults = [
+        {concepto: 'Cuotas ordinarias de administración', valor: '$0'},
+        {concepto: 'Intereses de mora', valor: '$0'},
+        {concepto: 'Cuotas extraordinarias', valor: '$0'},
+        {concepto: 'Gastos de cobranza', valor: '$0'},
+    ];
+    const items = data.length > 0 ? data : defaults;
+    tbody.innerHTML = '';
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="obl-input" value="${item.concepto || ''}"></td>
+            <td><input type="text" class="obl-input obl-valor" value="${item.valor || '$0'}"></td>
+            <td><button class="btn-remove" onclick="removeRow(this, '${tableId}')">&times;</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function closeModal() {
+    document.getElementById('demandaModal').classList.remove('active');
+    currentRow = null;
+}
+
+function addRow(tableId) {
+    const tbody = document.querySelector('#' + tableId + ' tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" class="obl-input" value=""></td>
+        <td><input type="text" class="obl-input obl-valor" value="$0"></td>
+        <td><button class="btn-remove" onclick="removeRow(this, '${tableId}')">&times;</button></td>`;
+    tbody.appendChild(tr);
+}
+
+function removeRow(btn, tableId) {
+    const tbody = document.querySelector('#' + tableId + ' tbody');
+    if (tbody.rows.length > 1) btn.closest('tr').remove();
+}
+
+function collectTableData(tableId) {
+    const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+    const data = [];
+    rows.forEach(r => {
+        const inputs = r.querySelectorAll('.obl-input');
+        if (inputs[0].value.trim()) {
+            data.push({ concepto: inputs[0].value, valor: inputs[1].value });
+        }
+    });
+    return data;
+}
+
+async function generateDemanda() {
+    if (!currentRow) return;
+    const btn = document.getElementById('btnGenerate');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+    const body = {
+        cedula: currentRow.dataset.cedula,
+        propietario: currentRow.dataset.propietario,
+        conjunto: currentRow.dataset.conjunto,
+        torre: currentRow.dataset.torre,
+        apto: currentRow.dataset.apto,
+        mora: currentRow.dataset.mora,
+        correo: currentRow.dataset.correo,
+        obligaciones: collectTableData('hechosTable'),
+        pretensiones: collectTableData('pretensionesTable'),
+        medida_cautelar: document.getElementById('inputMedidaCautelar').value,
+    };
+
+    try {
+        const resp = await fetch('/juridica/generar-demanda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            closeModal();
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        alert('Error de conexión: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-alt"></i> Generar Documento';
+    }
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#clientsTable tbody tr').forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        tr.style.display = text.includes(q) ? '' : 'none';
+    });
+});
+
+// Filter pills
+document.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', function() {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        const filter = this.dataset.filter;
+        document.querySelectorAll('#clientsTable tbody tr').forEach(tr => {
+            if (filter === 'all') tr.style.display = '';
+            else tr.style.display = tr.dataset.status === filter ? '' : 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

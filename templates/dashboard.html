@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - SLH Automatización{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">Centro de <span class="gold-text">Automatización</span></h1>
+        <p class="hero-subtitle">Monitoreo y gestión centralizada de procesos automatizados</p>
+    </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-header">
+        <h2 class="section-title">Procesos de Automatización</h2>
+        <div class="section-line"></div>
+    </div>
+
+    <div class="cards-grid">
+        {% for process in processes %}
+        {% if process.status.value == 'coming_soon' %}
+        <div class="process-card coming-soon" style="--accent: #6c757d;" data-delay="{{ loop.index0 }}">
+            <div class="card-header">
+                <div class="card-icon-wrapper muted">
+                    <i class="fas {{ process.icon }}"></i>
+                </div>
+                <span class="card-status" style="background: {{ process.get_status_color() }};">
+                    {{ process.get_status_label() }}
+                </span>
+            </div>
+            <h3 class="card-title">{{ process.name }}</h3>
+            <p class="card-description">{{ process.description }}</p>
+            <div class="coming-soon-banner">
+                <i class="fas fa-hard-hat"></i>
+                <span>Próximamente</span>
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ url_for('process.detail', slug=process.slug) }}" class="card-link">
+            <div class="process-card" style="--accent: {{ process.color_accent }};" data-delay="{{ loop.index0 }}">
+                <div class="card-glow"></div>
+                <div class="card-header">
+                    <div class="card-icon-wrapper">
+                        <i class="fas {{ process.icon }}"></i>
+                    </div>
+                    <span class="card-status" style="background: {{ process.get_status_color() }};">
+                        {{ process.get_status_label() }}
+                    </span>
+                </div>
+                <h3 class="card-title">{{ process.name }}</h3>
+                <p class="card-description">{{ process.description }}</p>
+                <div class="card-footer">
+                    <span class="card-time">
+                        <i class="fas fa-gavel"></i> {{ process.category }}
+                    </span>
+                    <span class="card-arrow"><i class="fas fa-arrow-right"></i></span>
+                </div>
+            </div>
+        </a>
+        {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.process-card');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const delay = entry.target.dataset.delay * 150;
+                setTimeout(() => entry.target.classList.add('visible'), delay);
+            }
+        });
+    }, { threshold: 0.1 });
+    cards.forEach(card => observer.observe(card));
+});
+</script>
+{% endblock %}

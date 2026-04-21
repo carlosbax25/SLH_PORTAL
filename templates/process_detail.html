@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ process.name }} - SLH Automatización{% endblock %}
+
+{% block content %}
+<section class="detail-hero" style="--accent: {{ process.color_accent }};">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas {{ process.icon }}"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">{{ process.name }}</h1>
+                <span class="detail-status" style="background: {{ process.get_status_color() }};">
+                    {{ process.get_status_label() }}
+                </span>
+            </div>
+        </div>
+        <p class="detail-description">{{ process.description }}</p>
+    </div>
+</section>
+
+<section class="detail-content">
+    {% if process.slug == 'juridica' %}
+    <div class="section-header">
+        <h2 class="section-title">Opciones del Módulo</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="options-grid">
+        <a href="{{ url_for('juridica.demandas') }}" class="option-card">
+            <div class="option-icon"><i class="fas fa-file-contract"></i></div>
+            <h3 class="option-title">Demandas / Condominios</h3>
+            <p class="option-desc">Generar documentos de demanda para clientes en estado jurídico</p>
+            <span class="option-arrow"><i class="fas fa-arrow-right"></i></span>
+        </a>
+    </div>
+    {% else %}
+    <div class="coming-soon-page">
+        <i class="fas fa-hard-hat"></i>
+        <h2>En Construcción</h2>
+        <p>Este módulo estará disponible próximamente.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
