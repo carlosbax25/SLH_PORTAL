@@ -6,11 +6,6 @@ main_bp = Blueprint('main', __name__)
 
 
 @main_bp.route('/')
-def index():
-    """Redirige al dashboard principal."""
-    return redirect(url_for('main.dashboard'))
-
-
 @main_bp.route('/dashboard')
 def dashboard():
     """Renderiza el dashboard con todas las tarjetas de procesos."""
