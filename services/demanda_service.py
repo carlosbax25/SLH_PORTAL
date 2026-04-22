@@ -20,7 +20,13 @@ TEMPLATE_PATH = os.path.join(BASE_DIR, "static", "MODELO DE DEMANDA PARA AUTOMAT
 GENERATED_DIR = os.path.join(BASE_DIR, "generated_demandas")
 
 _TEMP_TEMPLATE = os.path.join(tempfile.gettempdir(), "slh_demanda_modelo_v3.docx")
-shutil.copy2(TEMPLATE_PATH, _TEMP_TEMPLATE)
+
+# Copy template to temp (handles OneDrive locking on Windows)
+try:
+    shutil.copy2(TEMPLATE_PATH, _TEMP_TEMPLATE)
+except Exception:
+    # On Render/Linux the file is accessible directly
+    _TEMP_TEMPLATE = TEMPLATE_PATH
 
 os.makedirs(GENERATED_DIR, exist_ok=True)
 
