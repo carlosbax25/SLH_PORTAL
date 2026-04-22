@@ -122,6 +122,8 @@ def generar_demanda():
         filename = os.path.basename(filepath)
         return jsonify({"success": True, "filename": filename})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 

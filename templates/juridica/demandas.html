@@ -375,7 +375,7 @@ async function generateDemanda() {
                 const err = JSON.parse(text);
                 alert('Error: ' + (err.error || 'Error del servidor'));
             } catch(e) {
-                alert('Error del servidor. Intente de nuevo.');
+                alert('Error del servidor: ' + text.substring(0, 200));
             }
         } else {
             const data = await resp.json();
