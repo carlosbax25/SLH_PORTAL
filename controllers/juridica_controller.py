@@ -31,9 +31,9 @@ def demandas():
     total_pending = 0
     conjuntos = set()
     for c in clients:
-        c["demanda_generada"] = c["cedula"] in generated
+        c["demanda_generada"] = c["row_id"] in generated
         conjuntos.add(c["conjunto"])
-        info = generated.get(c["cedula"])
+        info = generated.get(c["row_id"])
         if info:
             total_generated += 1
             c["demanda_fecha"] = info.get("generated_at", "")[:16].replace("T", " ")
@@ -56,10 +56,11 @@ def demandas():
 def generar_demanda():
     """Genera documento de demanda para un cliente."""
     data = request.get_json()
-    if not data or "cedula" not in data:
-        return jsonify({"error": "Cédula requerida"}), 400
+    if not data or "row_id" not in data:
+        return jsonify({"error": "Datos requeridos"}), 400
 
-    cedula = SecurityMiddleware.sanitize_input(data["cedula"])
+    row_id = SecurityMiddleware.sanitize_input(data["row_id"])
+    cedula = SecurityMiddleware.sanitize_input(data.get("cedula", ""))
     propietario = SecurityMiddleware.sanitize_input(data.get("propietario", ""))
     conjunto = SecurityMiddleware.sanitize_input(data.get("conjunto", ""))
     torre = SecurityMiddleware.sanitize_input(data.get("torre", ""))
@@ -92,6 +93,7 @@ def generar_demanda():
         medida_cautelar_data = SecurityMiddleware.sanitize_input(medida_cautelar_data)
 
     client = {
+        "row_id": row_id,
         "cedula": cedula,
         "propietario": propietario,
         "conjunto": conjunto,

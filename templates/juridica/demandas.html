@@ -79,6 +79,7 @@
             <tbody>
                 {% for c in clients %}
                 <tr data-status="{{ 'generated' if c.demanda_generada else 'pending' }}"
+                    data-row-id="{{ c.row_id }}"
                     data-cedula="{{ c.cedula }}"
                     data-propietario="{{ c.propietario }}"
                     data-conjunto="{{ c.conjunto }}"
@@ -255,7 +256,7 @@
 const prevData = {
     {% for c in clients %}
     {% if c.demanda_generada %}
-    "{{ c.cedula }}": {
+    "{{ c.row_id }}": {
         hechos: {{ c.prev_hechos|default('[]')|safe }},
         pretensiones: {{ c.prev_pretensiones|default('[]')|safe }},
         medida: "{{ c.prev_medida|default('')|replace('"', '\\"') }}"
@@ -277,7 +278,7 @@ function openModal(tr) {
     document.getElementById('modalCorreo').textContent = tr.dataset.correo || 'No registrado';
 
     // Load previous data if regenerating
-    const cedula = tr.dataset.cedula;
+    const cedula = tr.dataset.rowId;
     const prev = prevData[cedula] || {};
     const prevHechos = prev.hechos || [];
     const prevPretensiones = prev.pretensiones || [];
@@ -349,6 +350,7 @@ async function generateDemanda() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
 
     const body = {
+        row_id: currentRow.dataset.rowId,
         cedula: currentRow.dataset.cedula,
         propietario: currentRow.dataset.propietario,
         conjunto: currentRow.dataset.conjunto,

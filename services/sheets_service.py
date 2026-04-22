@@ -28,9 +28,12 @@ def fetch_sheet_data() -> list[dict]:
     data = resp.read().decode("utf-8")
     reader = list(csv.reader(io.StringIO(data)))
     rows = []
-    for row in reader[1:]:
+    for idx, row in enumerate(reader[1:], start=2):
         if len(row) > COL_ESTADO:
+            # Unique row ID based on row number in sheet
+            row_id = f"R{idx}_{row[COL_CEDULA].strip()}_{row[COL_CONJUNTO].strip()}"
             rows.append({
+                "row_id": row_id,
                 "cedula": row[COL_CEDULA].strip(),
                 "conjunto": row[COL_CONJUNTO].strip(),
                 "fecha_corte": row[COL_FECHA_CORTE].strip(),
@@ -45,25 +48,7 @@ def fetch_sheet_data() -> list[dict]:
     return rows
 
 
-def _parse_mora(mora_str: str) -> float:
-    """Convierte string de mora como '$13,318,962' a float."""
-    try:
-        clean = mora_str.replace("$", "").replace(",", "").replace(".", "").strip()
-        return float(clean) if clean else 0.0
-    except (ValueError, TypeError):
-        return 0.0
-
-
 def get_juridica_clients() -> list[dict]:
-    """Retorna clientes en estado JURIDICA, deduplicados por cédula."""
+    """Retorna todas las filas en estado JURIDICA, sin deduplicar."""
     all_data = fetch_sheet_data()
-    juridica = [r for r in all_data if r["estado"].upper() == "JURIDICA" and r["cedula"]]
-
-    # Deduplicate by cedula — keep the row with highest mora
-    by_cedula: dict[str, dict] = {}
-    for r in juridica:
-        ced = r["cedula"]
-        if ced not in by_cedula or _parse_mora(r["mora"]) > _parse_mora(by_cedula[ced]["mora"]):
-            by_cedula[ced] = r
-
-    return list(by_cedula.values())
+    return [r for r in all_data if r["estado"].upper() == "JURIDICA"]

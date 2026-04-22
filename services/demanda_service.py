@@ -229,6 +229,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
 
     propietario = client["propietario"]
     cedula = client["cedula"]
+    row_id = client.get("row_id", cedula)
     conjunto = client["conjunto"]
     torre = client["torre"]
     apto = client["apto"]
@@ -338,7 +339,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     doc.save(filepath)
 
     # Track in Google Sheets
-    save_tracking_entry(cedula, {
+    save_tracking_entry(row_id, {
         "propietario": propietario,
         "conjunto": conjunto,
         "filename": filename,
