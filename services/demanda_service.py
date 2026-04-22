@@ -19,14 +19,18 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(BASE_DIR, "static", "MODELO DE DEMANDA PARA AUTOMATIZAR.docx")
 GENERATED_DIR = os.path.join(BASE_DIR, "generated_demandas")
 
-_TEMP_TEMPLATE = os.path.join(tempfile.gettempdir(), "slh_demanda_modelo_v3.docx")
+_TEMP_TEMPLATE = None
 
-# Copy template to temp (handles OneDrive locking on Windows)
-try:
-    shutil.copy2(TEMPLATE_PATH, _TEMP_TEMPLATE)
-except Exception:
-    # On Render/Linux the file is accessible directly
-    _TEMP_TEMPLATE = TEMPLATE_PATH
+def _get_template_path():
+    global _TEMP_TEMPLATE
+    if _TEMP_TEMPLATE and os.path.exists(_TEMP_TEMPLATE):
+        return _TEMP_TEMPLATE
+    try:
+        _TEMP_TEMPLATE = os.path.join(tempfile.gettempdir(), "slh_demanda_modelo_v3.docx")
+        shutil.copy2(TEMPLATE_PATH, _TEMP_TEMPLATE)
+    except Exception:
+        _TEMP_TEMPLATE = TEMPLATE_PATH
+    return _TEMP_TEMPLATE
 
 os.makedirs(GENERATED_DIR, exist_ok=True)
 
@@ -265,7 +269,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     Returns:
         Ruta al archivo generado.
     """
-    doc = Document(_TEMP_TEMPLATE)
+    doc = Document(_get_template_path())
 
     propietario = client["propietario"]
     cedula = client["cedula"]
