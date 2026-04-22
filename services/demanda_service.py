@@ -180,6 +180,25 @@ def _set_obligation_tables(doc, hechos_data=None, pretensiones_data=None):
                 row.cells[1].text = "$0"
 
 
+def _remove_empty_paragraphs_between(doc, after_text: str, before_text: str):
+    """Elimina párrafos vacíos entre dos párrafos identificados por texto."""
+    paragraphs = doc.paragraphs
+    after_idx = None
+    before_idx = None
+    for i, p in enumerate(paragraphs):
+        if after_text in p.text and after_idx is None:
+            after_idx = i
+        if before_text in p.text and after_idx is not None:
+            before_idx = i
+            break
+    if after_idx is not None and before_idx is not None:
+        # Remove empty paragraphs between them (go backwards)
+        for i in range(before_idx - 1, after_idx, -1):
+            if not paragraphs[i].text.strip():
+                p_element = paragraphs[i]._p
+                p_element.getparent().remove(p_element)
+
+
 def _remove_all_highlights(doc):
     """Quita todos los highlights de todo el documento eliminando el XML directamente."""
     from docx.oxml.ns import qn as _qn
@@ -328,6 +347,9 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
 
     # --- STEP 3: Obligation tables ---
     _set_obligation_tables(doc, hechos_data, pretensiones_data)
+
+    # --- STEP 3.5: Remove empty paragraphs between Segunda and Tercera ---
+    _remove_empty_paragraphs_between(doc, "Segunda:", "Tercera:")
 
     # --- STEP 4: Remove ALL highlights from the entire document ---
     _remove_all_highlights(doc)
