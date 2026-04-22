@@ -106,7 +106,7 @@
                     </td>
                     <td class="actions-cell">
                         {% if c.demanda_generada %}
-                        <a href="{{ url_for('juridica.descargar', filename=c.demanda_filename) }}"
+                        <a href="{{ url_for('juridica.descargar', row_id=c.row_id) }}"
                            class="btn-sm btn-gold" title="Descargar">
                             <i class="fas fa-download"></i>
                         </a>

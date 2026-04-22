@@ -112,14 +112,45 @@ def generar_demanda():
         return jsonify({"error": str(e)}), 500
 
 
-@juridica_bp.route("/descargar/<filename>")
-def descargar(filename: str):
-    """Descarga un documento de demanda generado."""
-    safe = SecurityMiddleware.sanitize_input(filename)
-    filepath = os.path.join(GENERATED_DIR, safe)
-    if not os.path.exists(filepath):
+@juridica_bp.route("/descargar/<row_id>")
+def descargar(row_id: str):
+    """Regenera y descarga un documento de demanda."""
+    safe_id = SecurityMiddleware.sanitize_input(row_id)
+    info = get_demanda_info(safe_id)
+    if not info:
         abort(404)
-    return send_file(filepath, as_attachment=True, download_name=safe)
+
+    client = {
+        "row_id": safe_id,
+        "cedula": info.get("propietario", ""),  # fallback
+        "propietario": info.get("propietario", ""),
+        "conjunto": info.get("conjunto", ""),
+        "torre": "",
+        "apto": "",
+        "mora": info.get("mora", ""),
+        "correo": "",
+    }
+    # Try to find full client data from sheet
+    try:
+        from services.sheets_service import get_juridica_clients
+        for c in get_juridica_clients():
+            if c.get("row_id") == safe_id:
+                client = c
+                break
+    except Exception:
+        pass
+
+    hechos = info.get("hechos", [])
+    pretensiones = info.get("pretensiones", [])
+    medida = info.get("medida_cautelar", "")
+
+    try:
+        filepath = generate_demanda(client, hechos or None, pretensiones or None,
+                                    medida_cautelar_text=medida)
+        filename = os.path.basename(filepath)
+        return send_file(filepath, as_attachment=True, download_name=filename)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @juridica_bp.route("/preview/<filename>")
