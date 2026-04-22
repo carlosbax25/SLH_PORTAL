@@ -80,8 +80,10 @@ def get_juridica_clients() -> list[dict]:
         if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
             best[key] = r
 
-    # Format mora to Colombian pesos
+    # Format mora to Colombian pesos and sort by highest mora
     result = list(best.values())
     for r in result:
+        r["mora_raw"] = _parse_mora(r["mora"])
         r["mora"] = _format_mora(r["mora"])
+    result.sort(key=lambda x: x["mora_raw"], reverse=True)
     return result
