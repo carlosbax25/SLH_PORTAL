@@ -381,7 +381,8 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
 
     # --- STEP 5: Save ---
     safe_name = re.sub(r'[^\w\s-]', '', propietario).strip().replace(' ', '_')
-    filename = f"Demanda_{safe_name}_{cedula}.docx"
+    fecha_file = datetime.now(COL_TZ).strftime("%Y%m%d")
+    filename = f"Demanda_{safe_name}_{cedula}_{fecha_file}.docx"
     filepath = os.path.join(GENERATED_DIR, filename)
     doc.save(filepath)
 
