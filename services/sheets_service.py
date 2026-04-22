@@ -49,9 +49,9 @@ def fetch_sheet_data() -> list[dict]:
 
 
 def _parse_mora(mora_str: str) -> float:
-    """Convierte string de mora a float."""
+    """Convierte string de mora a float. Formato: $13,318,962"""
     try:
-        clean = mora_str.replace("$", "").replace(",", "").replace(".", "").strip()
+        clean = mora_str.replace("$", "").replace(",", "").strip()
         return float(clean) if clean else 0.0
     except (ValueError, TypeError):
         return 0.0
@@ -64,8 +64,6 @@ def _format_mora(mora_str: str) -> str:
         return "$0"
     formatted = f"{int(value):,}".replace(",", ".")
     return f"${formatted}"
-    except (ValueError, TypeError):
-        return 0.0
 
 
 def get_juridica_clients() -> list[dict]:
