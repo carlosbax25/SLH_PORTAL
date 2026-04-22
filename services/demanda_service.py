@@ -203,6 +203,23 @@ def _remove_empty_paragraphs_between(doc, after_text: str, before_text: str, kee
             p_element.getparent().remove(p_element)
 
 
+def _apply_keep_with_next(doc):
+    """Aplica 'keep with next' a títulos y headings para evitar títulos huérfanos."""
+    from docx.oxml.ns import qn as _qn
+    from docx.oxml import OxmlElement
+    heading_styles = {"Heading 1", "Heading 2", "Heading 3"}
+    for p in doc.paragraphs:
+        if p.style.name in heading_styles:
+            ppr = p._p.find(_qn("w:pPr"))
+            if ppr is None:
+                ppr = OxmlElement("w:pPr")
+                p._p.insert(0, ppr)
+            kwn = ppr.find(_qn("w:keepNext"))
+            if kwn is None:
+                kwn = OxmlElement("w:keepNext")
+                ppr.append(kwn)
+
+
 def _remove_all_highlights(doc):
     """Quita todos los highlights de todo el documento eliminando el XML directamente."""
     from docx.oxml.ns import qn as _qn
@@ -354,6 +371,9 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
 
     # --- STEP 3.5: Remove empty paragraphs between Segunda and Tercera ---
     _remove_empty_paragraphs_between(doc, "Segunda:", "Tercera:")
+
+    # --- STEP 3.6: Keep headings with next paragraph (avoid orphan titles) ---
+    _apply_keep_with_next(doc)
 
     # --- STEP 4: Remove ALL highlights from the entire document ---
     _remove_all_highlights(doc)
