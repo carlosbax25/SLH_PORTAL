@@ -86,7 +86,9 @@
                     data-torre="{{ c.torre }}"
                     data-apto="{{ c.apto }}"
                     data-mora="{{ c.mora }}"
-                    data-correo="{{ c.correo }}">
+                    data-correo="{{ c.correo }}"
+                    data-ciudad="{{ c.ciudad }}"
+                    data-ubicacion="{{ c.ubicacion }}">
                     <td>{{ c.cedula }}</td>
                     <td class="name-cell">{{ c.propietario }}</td>
                     <td>{{ c.conjunto }}</td>
@@ -358,6 +360,8 @@ async function generateDemanda() {
         apto: currentRow.dataset.apto,
         mora: currentRow.dataset.mora,
         correo: currentRow.dataset.correo,
+        ciudad: currentRow.dataset.ciudad,
+        ubicacion: currentRow.dataset.ubicacion,
         obligaciones: collectTableData('hechosTable'),
         pretensiones: collectTableData('pretensionesTable'),
         medida_cautelar: document.getElementById('inputMedidaCautelar').value,
