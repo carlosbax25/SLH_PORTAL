@@ -180,8 +180,8 @@ def _set_obligation_tables(doc, hechos_data=None, pretensiones_data=None):
                 row.cells[1].text = "$0"
 
 
-def _remove_empty_paragraphs_between(doc, after_text: str, before_text: str):
-    """Elimina párrafos vacíos entre dos párrafos identificados por texto."""
+def _remove_empty_paragraphs_between(doc, after_text: str, before_text: str, keep=1):
+    """Elimina párrafos vacíos entre dos párrafos, dejando 'keep' vacíos."""
     paragraphs = doc.paragraphs
     after_idx = None
     before_idx = None
@@ -192,11 +192,15 @@ def _remove_empty_paragraphs_between(doc, after_text: str, before_text: str):
             before_idx = i
             break
     if after_idx is not None and before_idx is not None:
-        # Remove empty paragraphs between them (go backwards)
-        for i in range(before_idx - 1, after_idx, -1):
-            if not paragraphs[i].text.strip():
-                p_element = paragraphs[i]._p
-                p_element.getparent().remove(p_element)
+        empty_indices = [
+            i for i in range(after_idx + 1, before_idx)
+            if not paragraphs[i].text.strip()
+        ]
+        # Remove all but 'keep' empty paragraphs (remove from end)
+        to_remove = empty_indices[keep:]
+        for i in reversed(to_remove):
+            p_element = paragraphs[i]._p
+            p_element.getparent().remove(p_element)
 
 
 def _remove_all_highlights(doc):
