@@ -385,7 +385,14 @@ async function generateDemanda() {
             const data = await resp.json();
             if (data.success) {
                 closeModal();
-                location.reload();
+                // Save current search and filter state
+                const search = document.getElementById('searchInput').value;
+                const activeFilter = document.querySelector('.pill.active');
+                const filter = activeFilter ? activeFilter.dataset.filter : 'all';
+                const url = new URL(window.location);
+                url.searchParams.set('q', search);
+                url.searchParams.set('f', filter);
+                window.location.href = url.toString();
             } else {
                 alert('Error: ' + (data.error || 'Error desconocido'));
             }
@@ -406,6 +413,23 @@ document.getElementById('searchInput').addEventListener('input', function() {
         tr.style.display = text.includes(q) ? '' : 'none';
     });
 });
+
+// Restore state from URL params
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    const f = params.get('f');
+    if (q) {
+        document.getElementById('searchInput').value = q;
+        document.getElementById('searchInput').dispatchEvent(new Event('input'));
+    }
+    if (f && f !== 'all') {
+        document.querySelectorAll('.pill').forEach(p => {
+            p.classList.toggle('active', p.dataset.filter === f);
+        });
+        applyFilter(f);
+    }
+})();
 
 // Filter pills
 document.querySelectorAll('.pill').forEach(pill => {
