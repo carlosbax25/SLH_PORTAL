@@ -105,7 +105,7 @@ def generar_demanda():
         filepath = generate_demanda(client, obligation_data, pretensiones_data,
                                     medida_cautelar_text=medida_cautelar_data)
         filename = os.path.basename(filepath)
-        return jsonify({"success": True, "filename": filename})
+        return send_file(filepath, as_attachment=True, download_name=filename)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

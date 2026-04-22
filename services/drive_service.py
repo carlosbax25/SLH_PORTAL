@@ -7,7 +7,7 @@ from googleapiclient.http import MediaFileUpload
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLDER_ID = "1Bt4tE6qttIKuUv-iSwz5RRpNFfhQIiqE"
-SCOPES = ["https://www.googleapis.com/auth/drive.file",
+SCOPES = ["https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/spreadsheets"]
 
 
@@ -37,7 +37,7 @@ def _get_drive_service():
 
 def upload_to_drive(filepath: str, filename: str) -> str | None:
     """
-    Sube un archivo a Google Drive.
+    Sube un archivo a Google Drive en la carpeta compartida.
     Retorna el ID del archivo en Drive, o None si falla.
     """
     service = _get_drive_service()
@@ -55,7 +55,10 @@ def upload_to_drive(filepath: str, filename: str) -> str | None:
 
     try:
         file = service.files().create(
-            body=file_metadata, media_body=media, fields="id,webViewLink"
+            body=file_metadata,
+            media_body=media,
+            fields="id",
+            supportsAllDrives=True,
         ).execute()
         return file.get("id")
     except Exception as e:

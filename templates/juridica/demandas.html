@@ -367,11 +367,20 @@ async function generateDemanda() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        const data = await resp.json();
-        if (data.success) {
+        if (resp.ok) {
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Demanda_${body.propietario.replace(/ /g, '_')}_${body.cedula}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
             closeModal();
             location.reload();
         } else {
+            const data = await resp.json();
             alert('Error: ' + (data.error || 'Error desconocido'));
         }
     } catch (e) {

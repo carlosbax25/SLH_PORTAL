@@ -332,9 +332,6 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     doc.save(filepath)
 
     # Track in Google Sheets
-    drive_id = upload_to_drive(filepath, filename)
-    drive_link = get_drive_link(drive_id) if drive_id else ""
-
     save_tracking_entry(cedula, {
         "propietario": propietario,
         "conjunto": conjunto,
@@ -344,8 +341,8 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
         "hechos": hechos_data or [],
         "pretensiones": pretensiones_data or [],
         "medida_cautelar": medida_text,
-        "drive_id": drive_id or "",
-        "drive_link": drive_link,
+        "drive_id": "",
+        "drive_link": "",
     })
 
     return filepath
