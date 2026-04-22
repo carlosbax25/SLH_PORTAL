@@ -375,6 +375,11 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     # --- STEP 3.6: Keep headings with next paragraph (avoid orphan titles) ---
     _apply_keep_with_next(doc)
 
+    # --- STEP 3.7: Adjust bottom margin to avoid text overlapping footer ---
+    from docx.shared import Cm
+    for section in doc.sections:
+        section.bottom_margin = Cm(3.5)
+
     # --- STEP 4: Remove ALL highlights from the entire document ---
     _remove_all_highlights(doc)
 
