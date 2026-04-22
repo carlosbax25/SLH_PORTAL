@@ -101,7 +101,20 @@ def generar_demanda():
         "apto": apto,
         "mora": mora,
         "correo": correo,
+        "ciudad": "",
+        "ubicacion": "",
     }
+
+    # Enrich with Sheet data (ciudad, ubicacion)
+    try:
+        from services.sheets_service import get_juridica_clients
+        for c in get_juridica_clients():
+            if c.get("row_id") == row_id:
+                client["ciudad"] = c.get("ciudad", "")
+                client["ubicacion"] = c.get("ubicacion", "")
+                break
+    except Exception:
+        pass
 
     try:
         filepath = generate_demanda(client, obligation_data, pretensiones_data,

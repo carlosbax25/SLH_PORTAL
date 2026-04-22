@@ -369,12 +369,22 @@ async function generateDemanda() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        const data = await resp.json();
-        if (data.success) {
-            closeModal();
-            location.reload();
+        if (!resp.ok) {
+            const text = await resp.text();
+            try {
+                const err = JSON.parse(text);
+                alert('Error: ' + (err.error || 'Error del servidor'));
+            } catch(e) {
+                alert('Error del servidor. Intente de nuevo.');
+            }
         } else {
-            alert('Error: ' + (data.error || 'Error desconocido'));
+            const data = await resp.json();
+            if (data.success) {
+                closeModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Error desconocido'));
+            }
         }
     } catch (e) {
         alert('Error de conexión: ' + e.message);
