@@ -27,22 +27,22 @@
 <section class="detail-content">
     <!-- Real Metrics -->
     <div class="detail-grid" style="margin-bottom: 2rem;">
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="all" onclick="filterByMetric('all')">
             <div class="detail-card-icon"><i class="fas fa-users"></i></div>
             <h3>Total Clientes</h3>
             <div class="detail-big-number">{{ metrics.total }}</div>
         </div>
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="generated" onclick="filterByMetric('generated')">
             <div class="detail-card-icon"><i class="fas fa-file-alt"></i></div>
             <h3>Demandas Generadas</h3>
             <div class="detail-big-number">{{ metrics.generadas }}</div>
         </div>
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="pending" onclick="filterByMetric('pending')">
             <div class="detail-card-icon"><i class="fas fa-clock"></i></div>
             <h3>Pendientes</h3>
             <div class="detail-big-number">{{ metrics.pendientes }}</div>
         </div>
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="conjuntos" onclick="filterByMetric('all')">
             <div class="detail-card-icon"><i class="fas fa-building"></i></div>
             <h3>Conjuntos</h3>
             <div class="detail-big-number">{{ metrics.conjuntos }}</div>
@@ -405,12 +405,29 @@ document.querySelectorAll('.pill').forEach(pill => {
     pill.addEventListener('click', function() {
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
         this.classList.add('active');
-        const filter = this.dataset.filter;
-        document.querySelectorAll('#clientsTable tbody tr').forEach(tr => {
-            if (filter === 'all') tr.style.display = '';
-            else tr.style.display = tr.dataset.status === filter ? '' : 'none';
-        });
+        applyFilter(this.dataset.filter);
     });
 });
+
+function filterByMetric(filter) {
+    // Update pills to match
+    document.querySelectorAll('.pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.filter === filter);
+    });
+    // Highlight the clicked card
+    document.querySelectorAll('.metric-clickable').forEach(c => c.classList.remove('metric-active'));
+    const card = document.querySelector(`.metric-clickable[data-metric="${filter}"]`);
+    if (card) card.classList.add('metric-active');
+    applyFilter(filter);
+    // Scroll to table
+    document.getElementById('clientsTable').scrollIntoView({ behavior: 'smooth' });
+}
+
+function applyFilter(filter) {
+    document.querySelectorAll('#clientsTable tbody tr').forEach(tr => {
+        if (filter === 'all') tr.style.display = '';
+        else tr.style.display = tr.dataset.status === filter ? '' : 'none';
+    });
+}
 </script>
 {% endblock %}

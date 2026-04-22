@@ -638,3 +638,19 @@ body {
 .coming-soon-page i { font-size: 3rem; margin-bottom: 1rem; display: block; }
 .coming-soon-page h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-secondary); }
 .coming-soon-page p { font-size: 1rem; }
+
+
+/* ===== Clickable Metric Cards ===== */
+.metric-clickable {
+    cursor: pointer; transition: var(--transition);
+}
+.metric-clickable:hover {
+    border-color: var(--gold-dark);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.3), 0 0 20px var(--gold-glow);
+}
+.metric-clickable.metric-active {
+    border-color: var(--gold-light);
+    box-shadow: 0 0 20px var(--gold-glow);
+    background: rgba(150,110,30,0.08);
+}
