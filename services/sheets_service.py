@@ -49,10 +49,21 @@ def fetch_sheet_data() -> list[dict]:
 
 
 def _parse_mora(mora_str: str) -> float:
-    """Convierte string de mora como '$13,318,962' a float."""
+    """Convierte string de mora a float."""
     try:
-        clean = mora_str.replace("$", "").replace(",", "").strip()
+        clean = mora_str.replace("$", "").replace(",", "").replace(".", "").strip()
         return float(clean) if clean else 0.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _format_mora(mora_str: str) -> str:
+    """Formatea mora a pesos colombianos: $X.XXX.XXX"""
+    value = _parse_mora(mora_str)
+    if value == 0:
+        return "$0"
+    formatted = f"{int(value):,}".replace(",", ".")
+    return f"${formatted}"
     except (ValueError, TypeError):
         return 0.0
 
@@ -71,4 +82,8 @@ def get_juridica_clients() -> list[dict]:
         if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
             best[key] = r
 
-    return list(best.values())
+    # Format mora to Colombian pesos
+    result = list(best.values())
+    for r in result:
+        r["mora"] = _format_mora(r["mora"])
+    return result
