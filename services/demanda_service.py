@@ -8,7 +8,6 @@ from datetime import datetime, timezone, timedelta
 from copy import deepcopy
 from docx import Document
 from docx.shared import Pt
-from services.drive_service import upload_to_drive, get_drive_link
 from services.sheets_tracking import load_tracking, save_tracking_entry
 from docx.oxml.ns import qn
 
