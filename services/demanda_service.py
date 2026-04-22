@@ -321,11 +321,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
                 p.runs[0].bold = None
                 if len(p.runs) > 1:
                     ubicacion_part = f", {ubicacion}" if ubicacion else ""
-                    correo_part = f" Correo electrónico: {correo}" if correo else (
-                        " Manifiesto bajo la gravedad de juramento que desconozco la "
-                        "dirección electrónica del demandado/ no tengo prueba que "
-                        "acredite propiedad del correo."
-                    )
+                    correo_part = f" Correo electrónico: {correo}" if correo else ""
                     rest = (
                         f"Dirección: Conjunto Residencial {conjunto} "
                         f"Torre {torre} Apartamento {apto}{ubicacion_part}."
