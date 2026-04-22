@@ -48,7 +48,27 @@ def fetch_sheet_data() -> list[dict]:
     return rows
 
 
+def _parse_mora(mora_str: str) -> float:
+    """Convierte string de mora como '$13,318,962' a float."""
+    try:
+        clean = mora_str.replace("$", "").replace(",", "").strip()
+        return float(clean) if clean else 0.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
 def get_juridica_clients() -> list[dict]:
-    """Retorna todas las filas en estado JURIDICA, sin deduplicar."""
+    """Retorna clientes en estado JURIDICA, deduplicados por cédula+conjunto.
+    Para duplicados, toma la fila con mora más alta (periodo más reciente).
+    """
     all_data = fetch_sheet_data()
-    return [r for r in all_data if r["estado"].upper() == "JURIDICA"]
+    juridica = [r for r in all_data if r["estado"].upper() == "JURIDICA"]
+
+    # Deduplicate by (cedula+conjunto) or (propietario+conjunto) if no cedula
+    best: dict[str, dict] = {}
+    for r in juridica:
+        key = f"{r['cedula']}_{r['conjunto']}" if r["cedula"] else f"{r['propietario']}_{r['conjunto']}"
+        if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
+            best[key] = r
+
+    return list(best.values())
