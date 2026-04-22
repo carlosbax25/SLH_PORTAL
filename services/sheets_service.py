@@ -19,6 +19,8 @@ COL_CORREO = 6
 COL_TELEFONO = 7
 COL_MORA = 8
 COL_ESTADO = 9
+COL_CIUDAD = 10
+COL_UBICACION = 11
 
 
 def fetch_sheet_data() -> list[dict]:
@@ -44,6 +46,8 @@ def fetch_sheet_data() -> list[dict]:
                 "telefono": row[COL_TELEFONO].strip(),
                 "mora": row[COL_MORA].strip(),
                 "estado": row[COL_ESTADO].strip(),
+                "ciudad": row[COL_CIUDAD].strip() if len(row) > COL_CIUDAD else "",
+                "ubicacion": row[COL_UBICACION].strip() if len(row) > COL_UBICACION else "",
             })
     return rows
 

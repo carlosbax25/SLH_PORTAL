@@ -275,6 +275,8 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
     apto = client["apto"]
     mora = client["mora"]
     correo = client.get("correo", "")
+    ciudad = client.get("ciudad", "Cartagena")
+    ubicacion = client.get("ubicacion", "")
     fecha = _get_fecha_colombia()
     correo_conjunto = _get_correo_conjunto(conjunto)
 
@@ -301,7 +303,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
                 if len(p.runs) > 1:
                     p.runs[1].text = (
                         f"Dirección: Conjunto Residencial {conjunto}, "
-                        f"ciudad de Cartagena, correos electrónicos: "
+                        f"ciudad de {ciudad or 'Cartagena'}, correos electrónicos: "
                         f"{correo_conjunto}"
                     )
                     p.runs[1].bold = False
@@ -312,25 +314,20 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
             if p.runs:
                 for r in p.runs:
                     r.text = ""
-                # Run 0: "Parte demandada: " (bold=None, inherits heading bold)
                 p.runs[0].text = "Parte demandada: "
                 p.runs[0].bold = None
-                # Run 1+: rest is not bold
                 if len(p.runs) > 1:
-                    if correo:
-                        rest = (
-                            f"Dirección: Conjunto Residencial {conjunto} "
-                            f"Torre {torre} Apartamento {apto}, de la ciudad de "
-                            f"Cartagena. Correo electrónico: {correo}"
-                        )
-                    else:
-                        rest = (
-                            f"Dirección: Conjunto Residencial {conjunto} "
-                            f"Torre {torre} Apartamento {apto}, de la ciudad de "
-                            f"Cartagena. Manifiesto bajo la gravedad de juramento "
-                            f"que desconozco la dirección electrónica del demandado/ "
-                            f"no tengo prueba que acredite propiedad del correo."
-                        )
+                    ubicacion_part = f", {ubicacion}" if ubicacion else ""
+                    correo_part = f" Correo electrónico: {correo}" if correo else (
+                        " Manifiesto bajo la gravedad de juramento que desconozco la "
+                        "dirección electrónica del demandado/ no tengo prueba que "
+                        "acredite propiedad del correo."
+                    )
+                    rest = (
+                        f"Dirección: Conjunto Residencial {conjunto} "
+                        f"Torre {torre} Apartamento {apto}{ubicacion_part}."
+                        f"{correo_part}"
+                    )
                     p.runs[1].text = rest
                     p.runs[1].bold = False
             continue
@@ -356,7 +353,7 @@ def generate_demanda(client: dict, hechos_data=None, pretensiones_data=None,
         "{CEDULA}": cedula,
         "{TORRE}": torre,
         "{APTO}": apto,
-        "{CIUDAD}": "Cartagena",
+        "{CIUDAD}": ciudad or "Cartagena",
         "27 de febrero del 2026": fecha,
     }
 
