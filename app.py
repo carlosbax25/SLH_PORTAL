@@ -41,5 +41,31 @@ def create_app(config_name: str = 'development') -> Flask:
 
 application = create_app()
 
+# Schedule daily report at 7am Colombia time
+import threading
+import time
+from datetime import datetime, timezone, timedelta
+
+def _daily_scheduler():
+    COL_TZ = timezone(timedelta(hours=-5))
+    while True:
+        now = datetime.now(COL_TZ)
+        # Next 7am
+        target = now.replace(hour=7, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        wait = (target - now).total_seconds()
+        print(f"Next daily report in {wait/3600:.1f} hours")
+        time.sleep(wait)
+        try:
+            from services.daily_job import run_daily_report
+            run_daily_report()
+        except Exception as e:
+            print(f"Daily report error: {e}")
+
+if os.environ.get("RENDER") or not os.environ.get("WERKZEUG_RUN_MAIN"):
+    t = threading.Thread(target=_daily_scheduler, daemon=True)
+    t.start()
+
 if __name__ == '__main__':
     application.run(host='0.0.0.0', port=5000, debug=True)
