@@ -12,6 +12,17 @@ from security.middleware import SecurityMiddleware
 juridica_bp = Blueprint("juridica", __name__, url_prefix="/juridica")
 
 
+@juridica_bp.route("/test-email")
+def test_email():
+    """Endpoint temporal para probar el envío de correo."""
+    try:
+        from services.daily_job import run_daily_report
+        run_daily_report()
+        return jsonify({"success": True, "message": "Correo enviado"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @juridica_bp.route("/")
 def index():
     """Panel principal de Jurídica con opciones."""
