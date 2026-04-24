@@ -154,7 +154,7 @@ def _send_cobro_email(to_email: str, propietario: str, conjunto: str,
 
     msg = MIMEMultipart("related")
     msg["Subject"] = subject
-    msg["From"] = SMTP_USER
+    msg["From"] = f"Cobranza SLH <{SMTP_USER}>"
     msg["To"] = actual_to
     msg.attach(MIMEText(html, "html"))
 
