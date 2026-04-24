@@ -25,7 +25,7 @@
 </section>
 
 <section class="detail-content">
-    <div class="detail-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(6, 1fr);">
+    <div class="detail-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(7, 1fr);">
         <div class="detail-card metric-clickable" data-metric="all" onclick="filterCobranza('all')">
             <div class="detail-card-icon"><i class="fas fa-users"></i></div>
             <h3>Total</h3>
@@ -46,6 +46,11 @@
             <h3>Sin Correo</h3>
             <div class="detail-big-number">{{ metrics.sin_correo }}</div>
         </div>
+        <div class="detail-card metric-clickable" data-metric="correo_invalido" onclick="filterCobranza('correo_invalido')" style="border:1px solid rgba(220,53,69,0.3);">
+            <div class="detail-card-icon" style="color:#dc3545;"><i class="fas fa-exclamation-circle"></i></div>
+            <h3 style="color:#dc3545;">Correo Inválido</h3>
+            <div class="detail-big-number" style="color:#dc3545;">{{ metrics.correo_invalido }}</div>
+        </div>
         <div class="detail-card metric-clickable" data-metric="notif1" onclick="filterCobranza('notif1')">
             <div class="detail-card-icon"><i class="fas fa-paper-plane"></i></div>
             <h3>Notif. 1 Enviadas</h3>
@@ -58,10 +63,33 @@
         </div>
     </div>
 
-    <div class="table-controls">
+    <div class="table-controls" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
         <div class="search-box">
             <i class="fas fa-search"></i>
             <input type="text" id="searchInput" placeholder="Buscar por nombre, cédula o conjunto...">
+        </div>
+        {% if metrics.pendientes > 0 %}
+        <button class="btn-sm btn-gold" id="btnMasivo" onclick="envioMasivo()" style="padding:8px 18px;font-size:0.9rem;">
+            <i class="fas fa-paper-plane"></i> Envío Masivo Aviso 1 ({{ metrics.pendientes - metrics.sin_correo }} con correo)
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Progress bar for bulk send -->
+    <div id="masivoProgress" style="display:none;margin-bottom:1.5rem;">
+        <div style="background:rgba(255,255,255,0.05);border-radius:8px;overflow:hidden;border:1px solid rgba(150,110,30,0.3);">
+            <div style="padding:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="color:#e0e0e0;font-weight:600;" id="masivoTitle">
+                        <i class="fas fa-spinner fa-spin"></i> Enviando notificaciones...
+                    </span>
+                    <span style="color:#966e1e;font-weight:600;" id="masivoCount">0 / 0</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:4px;height:8px;overflow:hidden;">
+                    <div id="masivoBar" style="background:linear-gradient(90deg,#966e1e,#c4972a);height:100%;width:0%;transition:width 0.3s ease;border-radius:4px;"></div>
+                </div>
+                <div id="masivoLog" style="margin-top:12px;max-height:200px;overflow-y:auto;font-size:0.8rem;color:#a0a0b8;"></div>
+            </div>
         </div>
     </div>
 
@@ -83,6 +111,7 @@
             <tbody>
                 {% for c in clients %}
                 <tr data-tiene-correo="{{ 'si' if c.tiene_correo else 'no' }}"
+                    data-correo-valido="{{ 'si' if c.correo_valido else 'no' }}"
                     data-row-id="{{ c.row_id }}"
                     data-propietario="{{ c.propietario }}"
                     data-conjunto="{{ c.conjunto }}"
@@ -99,8 +128,12 @@
                     <td>{{ c.fecha_corte }}</td>
                     <td class="mora-cell">{{ c.mora }}</td>
                     <td>
-                        {% if c.tiene_correo %}
+                        {% if c.tiene_correo and c.correo_valido %}
                         <span style="color:#28a745;font-size:0.8rem;">{{ c.correo }}</span>
+                        {% elif c.tiene_correo and not c.correo_valido %}
+                        <span style="color:#dc3545;font-size:0.8rem;" title="{{ c.correo_error }}">
+                            <i class="fas fa-exclamation-circle"></i> {{ c.correo }}
+                        </span>
                         {% else %}
                         <span class="badge badge-pending"><i class="fas fa-exclamation"></i> Sin correo</span>
                         {% endif %}
@@ -282,16 +315,18 @@ async function sendNotification() {
 // Update metric cards by counting row data attributes
 function updateMetrics() {
     const rows = document.querySelectorAll('#cobranzaTable tbody tr');
-    let total = 0, conCorreo = 0, sinCorreo = 0, notif1 = 0, notif2 = 0;
+    let total = 0, conCorreo = 0, sinCorreo = 0, correoInvalido = 0, notif1 = 0, notif2 = 0;
     rows.forEach(tr => {
         total++;
-        if (tr.dataset.tieneCorreo === 'si') conCorreo++; else sinCorreo++;
+        if (tr.dataset.tieneCorreo === 'si' && tr.dataset.correoValido === 'si') conCorreo++;
+        else if (tr.dataset.tieneCorreo === 'si' && tr.dataset.correoValido === 'no') correoInvalido++;
+        else sinCorreo++;
         if (tr.dataset.notif1 === 'si') notif1++;
         if (tr.dataset.notif2 === 'si') notif2++;
     });
     const pendientes = total - notif1;
     // Update each card by data-metric attribute
-    const map = {all: total, pendientes: pendientes, con_correo: conCorreo, sin_correo: sinCorreo, notif1: notif1, notif2: notif2};
+    const map = {all: total, pendientes: pendientes, con_correo: conCorreo, sin_correo: sinCorreo, correo_invalido: correoInvalido, notif1: notif1, notif2: notif2};
     Object.keys(map).forEach(key => {
         const card = document.querySelector(`.metric-clickable[data-metric="${key}"] .detail-big-number`);
         if (card) card.textContent = map[key];
@@ -314,6 +349,7 @@ function filterCobranza(filter) {
         if (filter === 'all') tr.style.display = '';
         else if (filter === 'con_correo') tr.style.display = tr.dataset.tieneCorreo === 'si' ? '' : 'none';
         else if (filter === 'sin_correo') tr.style.display = tr.dataset.tieneCorreo === 'no' ? '' : 'none';
+        else if (filter === 'correo_invalido') tr.style.display = (tr.dataset.tieneCorreo === 'si' && tr.dataset.correoValido === 'no') ? '' : 'none';
         else if (filter === 'notif1') tr.style.display = tr.dataset.notif1 === 'si' ? '' : 'none';
         else if (filter === 'notif2') tr.style.display = tr.dataset.notif2 === 'si' ? '' : 'none';
         else if (filter === 'pendientes') tr.style.display = tr.dataset.notif1 === 'no' ? '' : 'none';
@@ -350,5 +386,112 @@ function filterCobranza(filter) {
         window.history.replaceState({}, '', window.location.pathname);
     }
 })();
+
+// Bulk send Aviso 1
+async function envioMasivo() {
+    const btn = document.getElementById('btnMasivo');
+    if (!btn) return;
+    
+    const pendientes = document.querySelectorAll('#cobranzaTable tbody tr[data-notif1="no"]');
+    const conCorreo = Array.from(pendientes).filter(tr => tr.dataset.tieneCorreo === 'si' && tr.dataset.correoValido === 'si');
+    const sinCorreo = Array.from(pendientes).filter(tr => tr.dataset.tieneCorreo === 'no');
+    const correoInvalido = Array.from(pendientes).filter(tr => tr.dataset.tieneCorreo === 'si' && tr.dataset.correoValido !== 'si');
+    
+    if (conCorreo.length === 0) {
+        alert('No hay propietarios pendientes con correo para enviar.');
+        return;
+    }
+    
+    if (!confirm(`¿Enviar Aviso 1 a ${conCorreo.length} propietarios con correo válido?\n\n${sinCorreo.length} sin correo y ${correoInvalido.length} con correo inválido serán omitidos.`)) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    
+    const progress = document.getElementById('masivoProgress');
+    const bar = document.getElementById('masivoBar');
+    const count = document.getElementById('masivoCount');
+    const title = document.getElementById('masivoTitle');
+    const log = document.getElementById('masivoLog');
+    progress.style.display = 'block';
+    log.innerHTML = '';
+    
+    const total = conCorreo.length;
+    let enviados = 0, errores = 0;
+    
+    // Log skipped ones first
+    sinCorreo.forEach(tr => {
+        log.innerHTML += `<div style="color:#ffc107;">⚠ ${tr.dataset.propietario} (${tr.dataset.conjunto}) — Sin correo, omitido</div>`;
+    });
+    correoInvalido.forEach(tr => {
+        log.innerHTML += `<div style="color:#dc3545;">✗ ${tr.dataset.propietario} (${tr.dataset.conjunto}) — Correo inválido: ${tr.dataset.correo}</div>`;
+    });
+    
+    for (let i = 0; i < conCorreo.length; i++) {
+        const tr = conCorreo[i];
+        const pct = Math.round(((i + 1) / total) * 100);
+        bar.style.width = pct + '%';
+        count.textContent = `${i + 1} / ${total}`;
+        
+        try {
+            const body = {
+                row_id: tr.dataset.rowId,
+                notif_num: 1,
+                propietario: tr.dataset.propietario,
+                conjunto: tr.dataset.conjunto,
+                cedula: tr.dataset.cedula,
+                mora: tr.dataset.mora,
+                correo: tr.dataset.correo,
+                torre: tr.dataset.torre || '',
+                apto: tr.dataset.apto || '',
+                correo_manual: '',
+            };
+            
+            const resp = await fetch('/cobranza/enviar-notificacion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await resp.json();
+            
+            if (data.success) {
+                enviados++;
+                const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+                const cells = tr.querySelectorAll('td');
+                cells[cells.length - 3].innerHTML = `<span class="badge badge-success"><i class="fas fa-check"></i> ${now}</span>`;
+                cells[cells.length - 2].innerHTML = `<span class="badge badge-pending"><i class="fas fa-clock"></i> Aviso 2 programado — Faltan 9 días</span>`;
+                cells[cells.length - 1].innerHTML = '';
+                tr.dataset.notif1 = 'si';
+                tr.style.background = 'rgba(40, 167, 69, 0.15)';
+                setTimeout(() => { tr.style.background = ''; }, 3000);
+                log.innerHTML += `<div style="color:#28a745;">✓ ${tr.dataset.propietario} (${tr.dataset.conjunto}) — Enviado</div>`;
+            } else {
+                errores++;
+                log.innerHTML += `<div style="color:#dc3545;">✗ ${tr.dataset.propietario} (${tr.dataset.conjunto}) — ${data.error || 'Error'}</div>`;
+            }
+        } catch (e) {
+            errores++;
+            log.innerHTML += `<div style="color:#dc3545;">✗ ${tr.dataset.propietario} (${tr.dataset.conjunto}) — Error de conexión</div>`;
+        }
+        
+        log.scrollTop = log.scrollHeight;
+    }
+    
+    // Update metrics
+    updateMetrics();
+    
+    // Final summary
+    title.innerHTML = `<i class="fas fa-check-circle" style="color:#28a745;"></i> Envío masivo completado`;
+    count.textContent = `${enviados} enviados, ${errores} errores, ${sinCorreo.length + correoInvalido.length} omitidos`;
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envío Masivo Aviso 1';
+    
+    // Hide button if no more pending
+    if (enviados === total && errores === 0) {
+        btn.style.display = 'none';
+    }
+}
 </script>
 {% endblock %}

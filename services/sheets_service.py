@@ -41,8 +41,11 @@ def fetch_sheet_data() -> list[dict]:
     rows = []
     for idx, row in enumerate(reader[1:], start=2):
         if len(row) > COL_ESTADO:
-            # Unique row ID based on row number in sheet
-            row_id = f"R{idx}_{row[COL_CEDULA].strip()}_{row[COL_CONJUNTO].strip()}"
+            # Stable row ID based on cedula+conjunto (not row number)
+            ced = row[COL_CEDULA].strip()
+            conj = row[COL_CONJUNTO].strip()
+            prop = row[COL_PROPIETARIO].strip()
+            row_id = f"{ced}_{conj}" if ced else f"{prop}_{conj}"
             rows.append({
                 "row_id": row_id,
                 "cedula": row[COL_CEDULA].strip(),
@@ -81,19 +84,37 @@ def _format_mora(mora_str: str) -> str:
     return f"${formatted}"
 
 
+def _parse_fecha_corte(fecha_str: str):
+    """Parsea fecha de corte a date. Intenta varios formatos comunes."""
+    from datetime import datetime as _dt
+    fecha_str = fecha_str.strip()
+    if not fecha_str:
+        return None
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y"):
+        try:
+            return _dt.strptime(fecha_str, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 def get_juridica_clients() -> list[dict]:
     """Retorna clientes en estado JURIDICA, deduplicados por cédula+conjunto.
-    Para duplicados, toma la fila con mora más alta (periodo más reciente).
+    Para duplicados, toma la fila con fecha de corte más reciente.
     """
     all_data = fetch_sheet_data()
     juridica = [r for r in all_data if r["estado"].upper() == "JURIDICA"]
 
-    # Deduplicate by (cedula+conjunto) or (propietario+conjunto) if no cedula
     best: dict[str, dict] = {}
     for r in juridica:
         key = f"{r['cedula']}_{r['conjunto']}" if r["cedula"] else f"{r['propietario']}_{r['conjunto']}"
-        if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
+        if key not in best:
             best[key] = r
+        else:
+            new_date = _parse_fecha_corte(r["fecha_corte"])
+            old_date = _parse_fecha_corte(best[key]["fecha_corte"])
+            if new_date and (not old_date or new_date > old_date):
+                best[key] = r
 
     # Format mora to Colombian pesos and sort by highest mora
     result = list(best.values())
@@ -112,8 +133,14 @@ def get_prejuridica_clients() -> list[dict]:
     best: dict[str, dict] = {}
     for r in pre:
         key = f"{r['cedula']}_{r['conjunto']}" if r["cedula"] else f"{r['propietario']}_{r['conjunto']}"
-        if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
+        if key not in best:
             best[key] = r
+        else:
+            # Keep the one with the most recent fecha_corte
+            new_date = _parse_fecha_corte(r["fecha_corte"])
+            old_date = _parse_fecha_corte(best[key]["fecha_corte"])
+            if new_date and (not old_date or new_date > old_date):
+                best[key] = r
 
     result = list(best.values())
     for r in result:

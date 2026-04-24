@@ -1,4 +1,5 @@
 """Servicio de tracking para notificaciones de cobranza PRE JURIDICA."""
+import dns.resolver
 import json
 import os
 import re
@@ -18,6 +19,42 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
+
+
+def validate_email(email: str) -> dict:
+    """Valida formato y dominio MX de un correo electrónico.
+    
+    Returns:
+        {"valid": bool, "reason": str}
+    """
+    email = email.strip().lower()
+    if not email or "@" not in email:
+        return {"valid": False, "reason": "Formato inválido"}
+    
+    # Basic format check
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        return {"valid": False, "reason": "Formato inválido"}
+    
+    domain = email.split("@")[1]
+    
+    # Known bad domains (typos)
+    bad_domains = {
+        "gmail.edu.co", "gmail.co", "gmial.com", "gmai.com", "gamil.com",
+        "hotmal.com", "hotmai.com", "outloo.com", "yaho.com",
+    }
+    if domain in bad_domains:
+        return {"valid": False, "reason": f"Dominio inválido: {domain}"}
+    
+    # DNS MX lookup
+    try:
+        dns.resolver.resolve(domain, 'MX')
+        return {"valid": True, "reason": "OK"}
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+        return {"valid": False, "reason": f"Dominio sin servidor de correo: {domain}"}
+    except Exception:
+        # If DNS lookup fails (network issue), allow the email through
+        return {"valid": True, "reason": "OK (DNS check skipped)"}
+
 
 # Cache
 _cobranza_cache = {"data": None, "time": 0}

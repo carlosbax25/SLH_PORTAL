@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from services.sheets_service import get_prejuridica_clients
 from services.cobranza_service import (
     load_cobranza_tracking, save_notification, can_send_notif2, days_until_notif2,
-    _send_cobro_email,
+    _send_cobro_email, validate_email,
 )
 from security.middleware import SecurityMiddleware
 
@@ -26,6 +26,7 @@ def notificaciones():
     total = len(clients)
     con_correo = 0
     sin_correo = 0
+    correo_invalido = 0
     notif1_enviadas = 0
     notif2_enviadas = 0
 
@@ -41,8 +42,16 @@ def notificaciones():
         c["can_notif2"] = can_send_notif2(stable_key) if c["notif1_sent"] else False
         c["days_remaining"] = days_until_notif2(stable_key) if c["notif1_sent"] and not c["notif2_sent"] else -1
         if c["tiene_correo"]:
-            con_correo += 1
+            check = validate_email(c["correo"])
+            c["correo_valido"] = check["valid"]
+            c["correo_error"] = check.get("reason", "") if not check["valid"] else ""
+            if check["valid"]:
+                con_correo += 1
+            else:
+                correo_invalido += 1
         else:
+            c["correo_valido"] = False
+            c["correo_error"] = ""
             sin_correo += 1
         if c["notif1_sent"]:
             notif1_enviadas += 1
@@ -53,6 +62,7 @@ def notificaciones():
         "total": total,
         "con_correo": con_correo,
         "sin_correo": sin_correo,
+        "correo_invalido": correo_invalido,
         "notif1": notif1_enviadas,
         "notif2": notif2_enviadas,
         "pendientes": total - notif1_enviadas,
@@ -83,6 +93,11 @@ def enviar_notificacion():
     if not email_to:
         return jsonify({"error": "No hay correo electrónico para enviar"}), 400
 
+    # Validate email before sending
+    check = validate_email(email_to)
+    if not check["valid"]:
+        return jsonify({"error": f"Correo inválido: {check['reason']}"}), 400
+
     success = _send_cobro_email(email_to, propietario, conjunto, mora, notif_num,
                                data.get("torre", ""), data.get("apto", ""))
     if success:
@@ -94,3 +109,68 @@ def enviar_notificacion():
         return jsonify({"success": True, "message": f"Notificación {notif_num} enviada a {email_to}"})
     else:
         return jsonify({"error": "Error al enviar el correo"}), 500
+
+
+@cobranza_bp.route("/envio-masivo", methods=["POST"])
+def envio_masivo():
+    """Envía Aviso 1 masivamente a todos los propietarios pendientes con correo."""
+    try:
+        clients = get_prejuridica_clients()
+    except Exception as e:
+        return jsonify({"error": f"Error obteniendo clientes: {e}"}), 500
+
+    tracking = load_cobranza_tracking()
+    enviados = 0
+    errores = 0
+    omitidos = 0
+    detalles = []
+
+    for c in clients:
+        stable_key = f"{c['cedula']}_{c['conjunto']}" if c['cedula'] else f"{c['propietario']}_{c['conjunto']}"
+        info = tracking.get(stable_key, {})
+
+        # Skip if already sent
+        if info.get("notif1_date"):
+            continue
+
+        correo = c.get("correo", "").strip()
+        if not correo:
+            omitidos += 1
+            detalles.append({"propietario": c["propietario"], "conjunto": c["conjunto"], "status": "sin_correo"})
+            continue
+
+        # Validate email domain before sending
+        check = validate_email(correo)
+        if not check["valid"]:
+            omitidos += 1
+            detalles.append({"propietario": c["propietario"], "conjunto": c["conjunto"],
+                             "status": "correo_invalido", "reason": check["reason"]})
+            continue
+
+        try:
+            success = _send_cobro_email(
+                correo, c["propietario"], c["conjunto"], c["mora"], 1,
+                c.get("torre", ""), c.get("apto", "")
+            )
+            if success:
+                save_notification(stable_key, 1, {
+                    "propietario": c["propietario"],
+                    "conjunto": c["conjunto"],
+                    "email": correo,
+                })
+                enviados += 1
+                detalles.append({"propietario": c["propietario"], "conjunto": c["conjunto"], "status": "enviado"})
+            else:
+                errores += 1
+                detalles.append({"propietario": c["propietario"], "conjunto": c["conjunto"], "status": "error"})
+        except Exception:
+            errores += 1
+            detalles.append({"propietario": c["propietario"], "conjunto": c["conjunto"], "status": "error"})
+
+    return jsonify({
+        "success": True,
+        "enviados": enviados,
+        "errores": errores,
+        "omitidos": omitidos,
+        "detalles": detalles,
+    })
