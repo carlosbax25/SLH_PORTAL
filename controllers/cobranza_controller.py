@@ -207,6 +207,6 @@ def enviar_notificacion():
             "conjunto": conjunto,
             "email": email_to,
         })
-        return jsonify({"success": True, "message": f"Notificación {notif_num} enviada a {email_to}"})
+        return jsonify({"success": True, "message": f"Notificación {notif_num} enviada (modo prueba: {TEST_EMAIL})"})
     else:
         return jsonify({"error": "Error al enviar el correo"}), 500
