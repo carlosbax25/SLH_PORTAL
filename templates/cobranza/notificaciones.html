@@ -25,11 +25,16 @@
 </section>
 
 <section class="detail-content">
-    <div class="detail-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(5, 1fr);">
+    <div class="detail-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(6, 1fr);">
         <div class="detail-card metric-clickable" data-metric="all" onclick="filterCobranza('all')">
             <div class="detail-card-icon"><i class="fas fa-users"></i></div>
             <h3>Total</h3>
             <div class="detail-big-number">{{ metrics.total }}</div>
+        </div>
+        <div class="detail-card metric-clickable" data-metric="pendientes" onclick="filterCobranza('pendientes')">
+            <div class="detail-card-icon"><i class="fas fa-hourglass-half"></i></div>
+            <h3>Pendientes</h3>
+            <div class="detail-big-number">{{ metrics.pendientes }}</div>
         </div>
         <div class="detail-card metric-clickable" data-metric="con_correo" onclick="filterCobranza('con_correo')">
             <div class="detail-card-icon"><i class="fas fa-envelope"></i></div>
@@ -291,6 +296,7 @@ function filterCobranza(filter) {
         else if (filter === 'sin_correo') tr.style.display = tr.dataset.tieneCorreo === 'no' ? '' : 'none';
         else if (filter === 'notif1') tr.style.display = tr.dataset.notif1 === 'si' ? '' : 'none';
         else if (filter === 'notif2') tr.style.display = tr.dataset.notif2 === 'si' ? '' : 'none';
+        else if (filter === 'pendientes') tr.style.display = tr.dataset.notif1 === 'no' ? '' : 'none';
     });
     document.getElementById('cobranzaTable').scrollIntoView({ behavior: 'smooth' });
 }

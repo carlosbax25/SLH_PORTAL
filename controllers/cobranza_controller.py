@@ -62,6 +62,7 @@ def notificaciones():
         "sin_correo": sin_correo,
         "notif1": notif1_enviadas,
         "notif2": notif2_enviadas,
+        "pendientes": total - notif1_enviadas,
     }
     return render_template("cobranza/notificaciones.html", clients=clients, metrics=metrics)
 
