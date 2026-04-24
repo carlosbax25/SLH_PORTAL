@@ -234,17 +234,34 @@ async function sendNotification() {
         });
         const data = await resp.json();
         if (data.success) {
-            const rowId = currentNotifRow.dataset.rowId;
+            const row = currentNotifRow;
             closeNotifModal();
-            // Preserve search and filter state
-            const search = document.getElementById('searchInput').value;
-            const activeCard = document.querySelector('.metric-clickable.metric-active');
-            const filter = activeCard ? activeCard.dataset.metric : 'all';
-            const url = new URL(window.location);
-            url.searchParams.set('highlight', rowId);
-            url.searchParams.set('q', search);
-            url.searchParams.set('f', filter);
-            window.location.href = url.toString();
+            
+            // Update the row in-place without reloading
+            const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            const cells = row.querySelectorAll('td');
+            
+            if (currentNotifNum === 1) {
+                // Update Notif 1 column
+                cells[cells.length - 3].innerHTML = `<span class="badge badge-success"><i class="fas fa-check"></i> ${now}</span>`;
+                // Update Notif 2 column
+                cells[cells.length - 2].innerHTML = `<span class="badge badge-pending">Faltan 10 días</span>`;
+                // Update Actions column - remove button
+                cells[cells.length - 1].innerHTML = '';
+                row.dataset.notif1 = 'si';
+            } else {
+                // Update Notif 2 column
+                cells[cells.length - 2].innerHTML = `<span class="badge badge-success"><i class="fas fa-check"></i> ${now}</span>`;
+                // Update Actions column
+                cells[cells.length - 1].innerHTML = `<span class="badge badge-success">Completado</span>`;
+                row.dataset.notif2 = 'si';
+            }
+            
+            // Highlight the row
+            row.style.background = 'rgba(150, 110, 30, 0.3)';
+            row.style.transition = 'background 3s ease';
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { row.style.background = ''; }, 4000);
         } else {
             alert('Error: ' + (data.error || 'Error desconocido'));
         }
