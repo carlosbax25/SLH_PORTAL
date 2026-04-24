@@ -329,8 +329,8 @@ def _send_cobro_email(to_email: str, propietario: str, conjunto: str,
     </div></body></html>
     """
 
-    # TEST MODE: send to test email instead of real recipient
-    actual_to = TEST_EMAIL
+    # Send to the real recipient
+    actual_to = to_email
 
     msg = MIMEMultipart("related")
     msg["Subject"] = subject

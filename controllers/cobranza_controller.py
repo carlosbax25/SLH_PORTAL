@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from services.sheets_service import get_prejuridica_clients
 from services.cobranza_service import (
     load_cobranza_tracking, save_notification, can_send_notif2, days_until_notif2,
-    _send_cobro_email, TEST_EMAIL,
+    _send_cobro_email,
 )
 from security.middleware import SecurityMiddleware
 
@@ -91,6 +91,6 @@ def enviar_notificacion():
             "conjunto": conjunto,
             "email": email_to,
         })
-        return jsonify({"success": True, "message": f"Notificación {notif_num} enviada (modo prueba: {TEST_EMAIL})"})
+        return jsonify({"success": True, "message": f"Notificación {notif_num} enviada a {email_to}"})
     else:
         return jsonify({"error": "Error al enviar el correo"}), 500
