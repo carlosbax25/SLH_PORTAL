@@ -1,9 +1,12 @@
 """Punto de entrada de la aplicación Flask - Dashboard de Automatización SLH."""
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, render_template
 from controllers.main_controller import main_bp
 from controllers.process_controller import process_bp
 from controllers.juridica_controller import juridica_bp
+from controllers.cobranza_controller import cobranza_bp
 from security.middleware import SecurityMiddleware
 
 
@@ -22,6 +25,7 @@ def create_app(config_name: str = 'development') -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(process_bp)
     app.register_blueprint(juridica_bp)
+    app.register_blueprint(cobranza_bp)
 
     # Manejadores de error
     @app.errorhandler(404)

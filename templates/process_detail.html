@@ -36,6 +36,19 @@
             <span class="option-arrow"><i class="fas fa-arrow-right"></i></span>
         </a>
     </div>
+    {% elif process.slug == 'cobranza' %}
+    <div class="section-header">
+        <h2 class="section-title">Opciones del Módulo</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="options-grid">
+        <a href="{{ url_for('cobranza.notificaciones') }}" class="option-card">
+            <div class="option-icon"><i class="fas fa-envelope"></i></div>
+            <h3 class="option-title">Notificaciones Pre-Jurídicas</h3>
+            <p class="option-desc">Envío de avisos de cobro a propietarios en estado PRE JURÍDICA</p>
+            <span class="option-arrow"><i class="fas fa-arrow-right"></i></span>
+        </a>
+    </div>
     {% else %}
     <div class="coming-soon-page">
         <i class="fas fa-hard-hat"></i>

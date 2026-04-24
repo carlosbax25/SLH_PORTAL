@@ -1,13 +1,21 @@
-"""Tracking de demandas usando Google Sheets API via HTTP directo (sin google-api-python-client)."""
+"""Tracking de demandas usando Google Sheets API via HTTP directo."""
 import os
 import json
+import time
 import urllib.request
 import urllib.parse
 from google.oauth2 import service_account
 import google.auth.transport.requests
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Cache for tracking data
+_tracking_cache = {"data": None, "time": 0}
+_TRACKING_CACHE_TTL = 120  # 2 minutes
 SHEET_ID = "1nVUwtQeNyNTdXyUuy2qvn_Nlt6UHJda-c2xf__ETqpo"
+
+_tracking_cache = {"data": None, "time": 0}
+CACHE_TTL = 120  # 2 minutes
 TRACKING_SHEET = "TRACKING"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 BASE_URL = f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}"
@@ -72,6 +80,9 @@ def _ensure_tracking_sheet():
 
 def load_tracking() -> dict:
     """Carga todo el tracking desde Google Sheets."""
+    now = time.time()
+    if _tracking_cache["data"] is not None and (now - _tracking_cache["time"]) < _TRACKING_CACHE_TTL:
+        return _tracking_cache["data"]
     try:
         _ensure_tracking_sheet()
         rng = urllib.parse.quote(f"{TRACKING_SHEET}!A2:I5000")
@@ -101,6 +112,8 @@ def load_tracking() -> dict:
                     "pretensiones": extra.get("pretensiones", []),
                     "medida_cautelar": extra.get("medida_cautelar", ""),
                 }
+        _tracking_cache["data"] = tracking
+        _tracking_cache["time"] = now
         return tracking
     except Exception as e:
         print(f"Error loading tracking: {e}")
@@ -109,6 +122,7 @@ def load_tracking() -> dict:
 
 def save_tracking_entry(row_id: str, data: dict):
     """Guarda o actualiza una entrada en el tracking."""
+    _tracking_cache["data"] = None  # Invalidate cache
     try:
         _ensure_tracking_sheet()
         extra = json.dumps({

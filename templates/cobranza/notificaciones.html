@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones Pre-Jurídicas - SLH{% endblock %}
+
+{% block content %}
+<section class="detail-hero">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('process.detail', slug='cobranza') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver a Cobranza
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">Notificaciones Pre-Jurídicas</h1>
+                <span class="detail-status" style="background: #28a745;">
+                    {{ metrics.total }} propietarios en PRE JURÍDICA
+                </span>
+            </div>
+        </div>
+        <p class="detail-description">
+            Gestión de avisos de cobro. Notificación 1 → espera 10 días → Notificación 2.
+        </p>
+    </div>
+</section>
+
+<section class="detail-content">
+    <div class="detail-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(5, 1fr);">
+        <div class="detail-card metric-clickable" data-metric="all" onclick="filterCobranza('all')">
+            <div class="detail-card-icon"><i class="fas fa-users"></i></div>
+            <h3>Total</h3>
+            <div class="detail-big-number">{{ metrics.total }}</div>
+        </div>
+        <div class="detail-card metric-clickable" data-metric="con_correo" onclick="filterCobranza('con_correo')">
+            <div class="detail-card-icon"><i class="fas fa-envelope"></i></div>
+            <h3>Con Correo</h3>
+            <div class="detail-big-number">{{ metrics.con_correo }}</div>
+        </div>
+        <div class="detail-card metric-clickable" data-metric="sin_correo" onclick="filterCobranza('sin_correo')">
+            <div class="detail-card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>Sin Correo</h3>
+            <div class="detail-big-number">{{ metrics.sin_correo }}</div>
+        </div>
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-paper-plane"></i></div>
+            <h3>Notif. 1 Enviadas</h3>
+            <div class="detail-big-number">{{ metrics.notif1 }}</div>
+        </div>
+        <div class="detail-card">
+            <div class="detail-card-icon"><i class="fas fa-paper-plane"></i></div>
+            <h3>Notif. 2 Enviadas</h3>
+            <div class="detail-big-number">{{ metrics.notif2 }}</div>
+        </div>
+    </div>
+
+    <div class="table-controls">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, cédula o conjunto...">
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="cobranzaTable">
+            <thead>
+                <tr>
+                    <th>Cédula</th>
+                    <th>Propietario</th>
+                    <th>Conjunto</th>
+                    <th>Fecha Corte</th>
+                    <th>Mora</th>
+                    <th>Correo</th>
+                    <th>Notif. 1</th>
+                    <th>Notif. 2</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clients %}
+                <tr data-tiene-correo="{{ 'si' if c.tiene_correo else 'no' }}"
+                    data-row-id="{{ c.row_id }}"
+                    data-propietario="{{ c.propietario }}"
+                    data-conjunto="{{ c.conjunto }}"
+                    data-mora="{{ c.mora }}"
+                    data-correo="{{ c.correo }}"
+                    data-cedula="{{ c.cedula }}"
+                    data-torre="{{ c.torre }}"
+                    data-apto="{{ c.apto }}">
+                    <td>{{ c.cedula }}</td>
+                    <td class="name-cell">{{ c.propietario }}</td>
+                    <td>{{ c.conjunto }}</td>
+                    <td>{{ c.fecha_corte }}</td>
+                    <td class="mora-cell">{{ c.mora }}</td>
+                    <td>
+                        {% if c.tiene_correo %}
+                        <span style="color:#28a745;font-size:0.8rem;">{{ c.correo }}</span>
+                        {% else %}
+                        <span class="badge badge-pending"><i class="fas fa-exclamation"></i> Sin correo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.notif1_sent %}
+                        <span class="badge badge-success"><i class="fas fa-check"></i> {{ c.notif1_date }}</span>
+                        {% else %}
+                        <span class="badge badge-pending">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.notif2_sent %}
+                        <span class="badge badge-success"><i class="fas fa-check"></i> {{ c.notif2_date }}</span>
+                        {% elif c.can_notif2 %}
+                        <span class="badge" style="background:rgba(255,193,7,0.15);color:#ffc107;">Listo para enviar</span>
+                        {% elif c.notif1_sent %}
+                        <span class="badge badge-pending">Faltan {{ c.days_remaining }} días</span>
+                        {% else %}
+                        <span style="color:#6c757d;">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                        {% if not c.notif1_sent %}
+                        <button class="btn-sm btn-gold" onclick="openNotifModal(this.closest('tr'), 1)">
+                            <i class="fas fa-paper-plane"></i> Aviso 1
+                        </button>
+                        {% elif c.can_notif2 and not c.notif2_sent %}
+                        <button class="btn-sm btn-gold" onclick="openNotifModal(this.closest('tr'), 2)">
+                            <i class="fas fa-paper-plane"></i> Aviso 2
+                        </button>
+                        {% elif c.notif1_sent and c.notif2_sent %}
+                        <span class="badge badge-success">Completado</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="notifModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-paper-plane"></i> <span id="modalTitle">Enviar Notificación</span></h2>
+                <button class="modal-close" onclick="closeNotifModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info">
+                    <div class="info-row">
+                        <span class="info-label">Propietario:</span>
+                        <span class="info-value" id="nPropietario"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Conjunto:</span>
+                        <span class="info-value" id="nConjunto"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mora:</span>
+                        <span class="info-value gold" id="nMora"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Correo registrado:</span>
+                        <span class="info-value" id="nCorreo"></span>
+                    </div>
+                </div>
+                <div id="noEmailWarning" style="display:none;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:8px;padding:12px;margin-top:12px;">
+                    <p style="color:#ffc107;margin:0 0 8px;font-size:0.9rem;">
+                        <i class="fas fa-exclamation-triangle"></i> Este propietario no tiene correo registrado.
+                    </p>
+                    <input type="email" class="obl-input" id="correoManual" placeholder="Ingrese correo electrónico para enviar">
+                </div>
+                <p style="color:#a0a0b8;font-size:0.8rem;margin-top:12px;">
+                    <i class="fas fa-info-circle"></i> Modo prueba: el correo se enviará a carlosbax25@gmail.com
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeNotifModal()">Cancelar</button>
+                <button class="btn-generate" id="btnSendNotif" onclick="sendNotification()">
+                    <i class="fas fa-paper-plane"></i> Enviar Notificación
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentNotifRow = null;
+let currentNotifNum = 1;
+
+function openNotifModal(tr, num) {
+    currentNotifRow = tr;
+    currentNotifNum = num;
+    document.getElementById('modalTitle').textContent = `Enviar Notificación ${num}`;
+    document.getElementById('nPropietario').textContent = tr.dataset.propietario;
+    document.getElementById('nConjunto').textContent = tr.dataset.conjunto;
+    document.getElementById('nMora').textContent = tr.dataset.mora;
+    const correo = tr.dataset.correo;
+    document.getElementById('nCorreo').textContent = correo || 'No registrado';
+    document.getElementById('noEmailWarning').style.display = correo ? 'none' : 'block';
+    document.getElementById('correoManual').value = '';
+    document.getElementById('notifModal').classList.add('active');
+}
+
+function closeNotifModal() {
+    document.getElementById('notifModal').classList.remove('active');
+    currentNotifRow = null;
+}
+
+async function sendNotification() {
+    if (!currentNotifRow) return;
+    const btn = document.getElementById('btnSendNotif');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+    const body = {
+        row_id: currentNotifRow.dataset.rowId,
+        notif_num: currentNotifNum,
+        propietario: currentNotifRow.dataset.propietario,
+        conjunto: currentNotifRow.dataset.conjunto,
+        mora: currentNotifRow.dataset.mora,
+        correo: currentNotifRow.dataset.correo,
+        torre: currentNotifRow.dataset.torre || '',
+        apto: currentNotifRow.dataset.apto || '',
+        correo_manual: document.getElementById('correoManual').value,
+    };
+
+    try {
+        const resp = await fetch('/cobranza/enviar-notificacion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(data.message);
+            closeNotifModal();
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        alert('Error de conexión: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Notificación';
+    }
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#cobranzaTable tbody tr').forEach(tr => {
+        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+
+function filterCobranza(filter) {
+    document.querySelectorAll('.metric-clickable').forEach(c => c.classList.remove('metric-active'));
+    const card = document.querySelector(`.metric-clickable[data-metric="${filter}"]`);
+    if (card) card.classList.add('metric-active');
+    document.querySelectorAll('#cobranzaTable tbody tr').forEach(tr => {
+        if (filter === 'all') tr.style.display = '';
+        else if (filter === 'con_correo') tr.style.display = tr.dataset.tieneCorreo === 'si' ? '' : 'none';
+        else if (filter === 'sin_correo') tr.style.display = tr.dataset.tieneCorreo === 'no' ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

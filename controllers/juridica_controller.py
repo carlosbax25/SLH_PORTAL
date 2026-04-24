@@ -1,7 +1,7 @@
 """Controlador para el módulo Jurídica - Demandas/Condominios."""
 import os
 import json
-from flask import Blueprint, render_template, request, send_file, jsonify, abort
+from flask import Blueprint, render_template, request, send_file, jsonify, abort, redirect, url_for
 from services.sheets_service import get_juridica_clients
 from services.demanda_service import (
     generate_demanda, is_demanda_generated, get_demanda_info, get_all_generated,
@@ -14,8 +14,8 @@ juridica_bp = Blueprint("juridica", __name__, url_prefix="/juridica")
 
 @juridica_bp.route("/")
 def index():
-    """Panel principal de Jurídica con opciones."""
-    return render_template("juridica/index.html")
+    """Redirige al detalle del proceso."""
+    return redirect(url_for('process.detail', slug='juridica'))
 
 
 @juridica_bp.route("/demandas")

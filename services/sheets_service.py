@@ -1,12 +1,17 @@
 """Servicio para conectarse a Google Sheets y obtener datos de cartera."""
 import csv
 import io
+import time
 import urllib.request
 from typing import Optional
 
 
 SHEET_ID = "1nVUwtQeNyNTdXyUuy2qvn_Nlt6UHJda-c2xf__ETqpo"
 EXPORT_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+
+# Cache: data + timestamp
+_cache = {"data": None, "time": 0}
+CACHE_TTL = 300  # 5 minutes
 
 # Column mapping (0-indexed)
 COL_CEDULA = 0
@@ -24,7 +29,11 @@ COL_UBICACION = 11
 
 
 def fetch_sheet_data() -> list[dict]:
-    """Descarga y parsea el Google Sheet completo."""
+    """Descarga y parsea el Google Sheet completo. Usa caché de 5 min."""
+    now = time.time()
+    if _cache["data"] is not None and (now - _cache["time"]) < CACHE_TTL:
+        return _cache["data"]
+
     req = urllib.request.Request(EXPORT_URL, headers={"User-Agent": "Mozilla/5.0"})
     resp = urllib.request.urlopen(req, timeout=30)
     data = resp.read().decode("utf-8")
@@ -49,6 +58,8 @@ def fetch_sheet_data() -> list[dict]:
                 "ciudad": row[COL_CIUDAD].strip() if len(row) > COL_CIUDAD else "",
                 "ubicacion": row[COL_UBICACION].strip() if len(row) > COL_UBICACION else "",
             })
+    _cache["data"] = rows
+    _cache["time"] = now
     return rows
 
 
@@ -89,5 +100,25 @@ def get_juridica_clients() -> list[dict]:
     for r in result:
         r["mora_raw"] = _parse_mora(r["mora"])
         r["mora"] = _format_mora(r["mora"])
+    result.sort(key=lambda x: x["mora_raw"], reverse=True)
+    return result
+
+
+def get_prejuridica_clients() -> list[dict]:
+    """Retorna clientes en estado PRE JURIDICA, deduplicados por cédula+conjunto."""
+    all_data = fetch_sheet_data()
+    pre = [r for r in all_data if r["estado"].upper() == "PRE JURIDICA"]
+
+    best: dict[str, dict] = {}
+    for r in pre:
+        key = f"{r['cedula']}_{r['conjunto']}" if r["cedula"] else f"{r['propietario']}_{r['conjunto']}"
+        if key not in best or _parse_mora(r["mora"]) > _parse_mora(best[key]["mora"]):
+            best[key] = r
+
+    result = list(best.values())
+    for r in result:
+        r["mora_raw"] = _parse_mora(r["mora"])
+        r["mora"] = _format_mora(r["mora"])
+        r["tiene_correo"] = bool(r.get("correo", "").strip())
     result.sort(key=lambda x: x["mora_raw"], reverse=True)
     return result

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Cobranza - SLH Automatización{% endblock %}
+{% block content %}
+<section class="detail-hero">
+    <div class="detail-hero-content">
+        <a href="{{ url_for('process.detail', slug='cobranza') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver a Cobranza
+        </a>
+        <div class="detail-header">
+            <div class="detail-icon-wrapper">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div>
+                <h1 class="detail-title">Módulo Cobranza</h1>
+                <span class="detail-status" style="background: #28a745;">Activo</span>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="detail-content">
+    <div class="options-grid">
+        <a href="{{ url_for('cobranza.notificaciones') }}" class="option-card">
+            <div class="option-icon"><i class="fas fa-envelope"></i></div>
+            <h3 class="option-title">Notificaciones Pre-Jurídicas</h3>
+            <p class="option-desc">Envío de avisos de cobro a propietarios en mora</p>
+            <span class="option-arrow"><i class="fas fa-arrow-right"></i></span>
+        </a>
+    </div>
+</section>
+{% endblock %}
