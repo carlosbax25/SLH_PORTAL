@@ -236,9 +236,14 @@ async function sendNotification() {
         if (data.success) {
             const rowId = currentNotifRow.dataset.rowId;
             closeNotifModal();
-            // Reload with highlight param
+            // Preserve search and filter state
+            const search = document.getElementById('searchInput').value;
+            const activeCard = document.querySelector('.metric-clickable.metric-active');
+            const filter = activeCard ? activeCard.dataset.metric : 'all';
             const url = new URL(window.location);
             url.searchParams.set('highlight', rowId);
+            url.searchParams.set('q', search);
+            url.searchParams.set('f', filter);
             window.location.href = url.toString();
         } else {
             alert('Error: ' + (data.error || 'Error desconocido'));
@@ -276,13 +281,26 @@ function filterCobranza(filter) {
 // Highlight row after notification sent
 (function() {
     const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    const f = params.get('f');
+    // Restore search
+    if (q) {
+        document.getElementById('searchInput').value = q;
+        document.getElementById('searchInput').dispatchEvent(new Event('input'));
+    }
+    // Restore filter
+    if (f && f !== 'all') {
+        filterCobranza(f);
+    }
+    // Highlight
     const hlId = params.get('highlight');
     if (hlId) {
         const row = document.querySelector(`tr[data-row-id="${hlId}"]`);
         if (row) {
+            row.style.display = '';  // Make sure it's visible even if filtered
             row.style.background = 'rgba(150, 110, 30, 0.25)';
             row.style.transition = 'background 3s ease';
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
             setTimeout(() => { row.style.background = ''; }, 4000);
         }
         // Clean URL
