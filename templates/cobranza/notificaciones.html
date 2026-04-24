@@ -41,12 +41,12 @@
             <h3>Sin Correo</h3>
             <div class="detail-big-number">{{ metrics.sin_correo }}</div>
         </div>
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="notif1" onclick="filterCobranza('notif1')">
             <div class="detail-card-icon"><i class="fas fa-paper-plane"></i></div>
             <h3>Notif. 1 Enviadas</h3>
             <div class="detail-big-number">{{ metrics.notif1 }}</div>
         </div>
-        <div class="detail-card">
+        <div class="detail-card metric-clickable" data-metric="notif2" onclick="filterCobranza('notif2')">
             <div class="detail-card-icon"><i class="fas fa-paper-plane"></i></div>
             <h3>Notif. 2 Enviadas</h3>
             <div class="detail-big-number">{{ metrics.notif2 }}</div>
@@ -85,7 +85,9 @@
                     data-correo="{{ c.correo }}"
                     data-cedula="{{ c.cedula }}"
                     data-torre="{{ c.torre }}"
-                    data-apto="{{ c.apto }}">
+                    data-apto="{{ c.apto }}"
+                    data-notif1="{{ 'si' if c.notif1_sent else 'no' }}"
+                    data-notif2="{{ 'si' if c.notif2_sent else 'no' }}">
                     <td>{{ c.cedula }}</td>
                     <td class="name-cell">{{ c.propietario }}</td>
                     <td>{{ c.conjunto }}</td>
@@ -232,9 +234,12 @@ async function sendNotification() {
         });
         const data = await resp.json();
         if (data.success) {
-            alert(data.message);
+            const rowId = currentNotifRow.dataset.rowId;
             closeNotifModal();
-            location.reload();
+            // Reload with highlight param
+            const url = new URL(window.location);
+            url.searchParams.set('highlight', rowId);
+            window.location.href = url.toString();
         } else {
             alert('Error: ' + (data.error || 'Error desconocido'));
         }
@@ -262,7 +267,27 @@ function filterCobranza(filter) {
         if (filter === 'all') tr.style.display = '';
         else if (filter === 'con_correo') tr.style.display = tr.dataset.tieneCorreo === 'si' ? '' : 'none';
         else if (filter === 'sin_correo') tr.style.display = tr.dataset.tieneCorreo === 'no' ? '' : 'none';
+        else if (filter === 'notif1') tr.style.display = tr.dataset.notif1 === 'si' ? '' : 'none';
+        else if (filter === 'notif2') tr.style.display = tr.dataset.notif2 === 'si' ? '' : 'none';
     });
+    document.getElementById('cobranzaTable').scrollIntoView({ behavior: 'smooth' });
 }
+
+// Highlight row after notification sent
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const hlId = params.get('highlight');
+    if (hlId) {
+        const row = document.querySelector(`tr[data-row-id="${hlId}"]`);
+        if (row) {
+            row.style.background = 'rgba(150, 110, 30, 0.25)';
+            row.style.transition = 'background 3s ease';
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { row.style.background = ''; }, 4000);
+        }
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+})();
 </script>
 {% endblock %}
