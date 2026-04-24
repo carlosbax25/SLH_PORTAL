@@ -114,11 +114,11 @@
                     </td>
                     <td>
                         {% if c.notif2_sent %}
-                        <span class="badge badge-success"><i class="fas fa-check"></i> {{ c.notif2_date }}</span>
+                        <span class="badge badge-success"><i class="fas fa-check"></i> Auto — {{ c.notif2_date }}</span>
                         {% elif c.can_notif2 %}
-                        <span class="badge" style="background:rgba(255,193,7,0.15);color:#ffc107;">Listo para enviar</span>
+                        <span class="badge" style="background:rgba(255,193,7,0.15);color:#ffc107;"><i class="fas fa-clock"></i> Aviso 2 programado — Listo para envío</span>
                         {% elif c.notif1_sent %}
-                        <span class="badge badge-pending">Faltan {{ c.days_remaining }} días</span>
+                        <span class="badge badge-pending"><i class="fas fa-clock"></i> Aviso 2 programado — Faltan {{ c.days_remaining }} días</span>
                         {% else %}
                         <span style="color:#6c757d;">—</span>
                         {% endif %}
@@ -127,10 +127,6 @@
                         {% if not c.notif1_sent %}
                         <button class="btn-sm btn-gold" onclick="openNotifModal(this.closest('tr'), 1)">
                             <i class="fas fa-paper-plane"></i> Aviso 1
-                        </button>
-                        {% elif c.can_notif2 and not c.notif2_sent %}
-                        <button class="btn-sm btn-gold" onclick="openNotifModal(this.closest('tr'), 2)">
-                            <i class="fas fa-paper-plane"></i> Aviso 2
                         </button>
                         {% elif c.notif1_sent and c.notif2_sent %}
                         <span class="badge badge-success">Completado</span>
@@ -224,6 +220,7 @@ async function sendNotification() {
         notif_num: currentNotifNum,
         propietario: currentNotifRow.dataset.propietario,
         conjunto: currentNotifRow.dataset.conjunto,
+        cedula: currentNotifRow.dataset.cedula,
         mora: currentNotifRow.dataset.mora,
         correo: currentNotifRow.dataset.correo,
         torre: currentNotifRow.dataset.torre || '',
@@ -240,18 +237,19 @@ async function sendNotification() {
         const data = await resp.json();
         if (data.success) {
             const row = currentNotifRow;
+            const notifNum = currentNotifNum;
             closeNotifModal();
             
             // Update the row in-place without reloading
             const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
             const cells = row.querySelectorAll('td');
             
-            if (currentNotifNum === 1) {
+            if (notifNum === 1) {
                 // Update Notif 1 column
                 cells[cells.length - 3].innerHTML = `<span class="badge badge-success"><i class="fas fa-check"></i> ${now}</span>`;
-                // Update Notif 2 column
-                cells[cells.length - 2].innerHTML = `<span class="badge badge-pending">Faltan 10 días</span>`;
-                // Update Actions column - remove button
+                // Update Notif 2 column — show scheduled status
+                cells[cells.length - 2].innerHTML = `<span class="badge badge-pending"><i class="fas fa-clock"></i> Aviso 2 programado — Faltan 9 días</span>`;
+                // Update Actions column — empty (Aviso 2 is automatic)
                 cells[cells.length - 1].innerHTML = '';
                 row.dataset.notif1 = 'si';
             } else {
@@ -261,6 +259,9 @@ async function sendNotification() {
                 cells[cells.length - 1].innerHTML = `<span class="badge badge-success">Completado</span>`;
                 row.dataset.notif2 = 'si';
             }
+
+            // Update metric cards dynamically
+            updateMetrics();
             
             // Highlight the row
             row.style.background = 'rgba(150, 110, 30, 0.3)';
@@ -276,6 +277,25 @@ async function sendNotification() {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Notificación';
     }
+}
+
+// Update metric cards by counting row data attributes
+function updateMetrics() {
+    const rows = document.querySelectorAll('#cobranzaTable tbody tr');
+    let total = 0, conCorreo = 0, sinCorreo = 0, notif1 = 0, notif2 = 0;
+    rows.forEach(tr => {
+        total++;
+        if (tr.dataset.tieneCorreo === 'si') conCorreo++; else sinCorreo++;
+        if (tr.dataset.notif1 === 'si') notif1++;
+        if (tr.dataset.notif2 === 'si') notif2++;
+    });
+    const pendientes = total - notif1;
+    // Update each card by data-metric attribute
+    const map = {all: total, pendientes: pendientes, con_correo: conCorreo, sin_correo: sinCorreo, notif1: notif1, notif2: notif2};
+    Object.keys(map).forEach(key => {
+        const card = document.querySelector(`.metric-clickable[data-metric="${key}"] .detail-big-number`);
+        if (card) card.textContent = map[key];
+    });
 }
 
 // Search

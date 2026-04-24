@@ -89,6 +89,16 @@ def run_daily_report():
     _save_snapshot(clients)
     print("Daily report complete.")
 
+    # Auto Aviso 2: enviar automáticamente a propietarios elegibles
+    try:
+        from services.cobranza_service import run_auto_aviso2
+        result = run_auto_aviso2()
+        print(f"Auto Aviso 2: {result['enviados']} enviados, "
+              f"{result['omitidos']} omitidos, {result['errores']} errores "
+              f"de {result['elegibles']} elegibles")
+    except Exception as e:
+        print(f"Error en auto aviso 2: {e}")
+
 
 if __name__ == "__main__":
     run_daily_report()
