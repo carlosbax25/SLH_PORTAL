@@ -88,6 +88,66 @@ def change_password(username: str, old_password: str, new_password: str) -> tupl
     return True, "Contraseña actualizada"
 
 
+def reset_password(username: str) -> tuple[bool, str, str]:
+    """Resetea la contraseña a una temporal. Retorna (success, message, temp_password)."""
+    import secrets
+    user = USERS.get(username)
+    if not user:
+        return False, "Usuario no encontrado", ""
+    temp_pw = secrets.token_urlsafe(8)  # ~11 chars, safe for URLs
+    USERS[username]["password_hash"] = generate_password_hash(temp_pw)
+    _save_users(USERS)
+    return True, "Contraseña reseteada", temp_pw
+
+
+def _send_reset_email(username: str, temp_password: str) -> bool:
+    """Envía la contraseña temporal a los administradores."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASS", "")
+    if not smtp_user or not smtp_pass:
+        return False
+
+    recipients = ["jhoana.jaraba@slh.com.co", "carlosbax25@gmail.com"]
+    subject = f"SLH - Recuperación de contraseña: {username}"
+    html = f"""
+    <html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;">
+    <div style="max-width:500px;margin:0 auto;background:#1a1a2e;border-radius:12px;overflow:hidden;">
+        <div style="background:#966e1e;padding:16px;text-align:center;">
+            <h2 style="color:#fff;margin:0;">Recuperación de Contraseña</h2>
+        </div>
+        <div style="padding:24px;color:#e0e0e0;">
+            <p>El usuario <strong>{username}</strong> solicitó recuperar su contraseña.</p>
+            <div style="background:#0d0d1a;border:1px solid rgba(150,110,30,0.3);border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
+                <p style="color:#a0a0b8;margin:0 0 8px;">Contraseña temporal:</p>
+                <p style="color:#966e1e;font-size:1.4rem;font-weight:700;margin:0;letter-spacing:2px;">{temp_password}</p>
+            </div>
+            <p style="color:#a0a0b8;font-size:0.85rem;">El usuario debe cambiar esta contraseña después de iniciar sesión.</p>
+        </div>
+    </div>
+    </body></html>
+    """
+
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = f"SLH Sistema <{smtp_user}>"
+    msg["To"] = ", ".join(recipients)
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, recipients, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Error sending reset email: {e}")
+        return False
+
+
 # --- Decoradores ---
 
 
@@ -156,3 +216,23 @@ def cambiar_password():
             if ok:
                 return redirect(url_for("main.dashboard"))
     return render_template("cambiar_password.html")
+
+
+@auth_bp.route("/olvide-password", methods=["GET", "POST"])
+def olvide_password():
+    if get_current_user():
+        return redirect(url_for("main.dashboard"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        ok, msg, temp_pw = reset_password(username)
+        if ok:
+            sent = _send_reset_email(username, temp_pw)
+            if sent:
+                flash("Se envió una contraseña temporal al administrador. Solicítela para ingresar.")
+            else:
+                flash("Error al enviar el correo. Contacte al administrador.")
+        else:
+            # Generic message to not reveal if user exists
+            flash("Si el usuario existe, se enviará una contraseña temporal al administrador.")
+        return redirect(url_for("auth.login"))
+    return render_template("olvide_password.html")

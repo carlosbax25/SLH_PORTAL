@@ -33,7 +33,7 @@ def create_app(config_name: str = 'development') -> Flask:
     @app.before_request
     def check_auth():
         path = request.path
-        if path.startswith("/login") or path.startswith("/logout") or path.startswith("/static"):
+        if path.startswith("/login") or path.startswith("/logout") or path.startswith("/static") or path.startswith("/olvide-password"):
             return None
         if not session.get("username"):
             return redirect(url_for("auth.login"))
