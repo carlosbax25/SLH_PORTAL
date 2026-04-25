@@ -1,15 +1,17 @@
 """Módulo de autenticación y control de acceso por rol."""
 import json
 import os
+import urllib.parse
 from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# --- Paths ---
+# --- Config ---
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _USERS_FILE = os.path.join(_BASE_DIR, "users.json")
+_AUTH_SHEET = "AUTH_USERS"
 
-# --- Default users (used to create users.json if it doesn't exist) ---
+# --- Default users ---
 _DEFAULT_HASH = generate_password_hash("slh2026")
 
 _DEFAULT_USERS = {
@@ -21,19 +23,89 @@ _DEFAULT_USERS = {
 }
 
 
+def _ensure_auth_sheet():
+    """Crea la hoja AUTH_USERS si no existe."""
+    from services.sheets_tracking import _api_request
+    result = _api_request("GET", "?fields=sheets.properties.title")
+    if not result:
+        return
+    sheets = [s["properties"]["title"] for s in result.get("sheets", [])]
+    if _AUTH_SHEET in sheets:
+        return
+    _api_request("POST", ":batchUpdate", {
+        "requests": [{"addSheet": {"properties": {"title": _AUTH_SHEET}}}]
+    })
+    rng = urllib.parse.quote(f"{_AUTH_SHEET}!A1:C1")
+    _api_request("PUT", f"values/{rng}?valueInputOption=RAW", {
+        "values": [["USERNAME", "PASSWORD_HASH", "MODULES"]]
+    })
+
+
+def _load_users_from_sheets() -> dict | None:
+    """Lee usuarios desde Google Sheets. Retorna None si falla."""
+    try:
+        from services.sheets_tracking import _api_request
+        _ensure_auth_sheet()
+        rng = urllib.parse.quote(f"{_AUTH_SHEET}!A2:C20")
+        result = _api_request("GET", f"values/{rng}")
+        if not result or not result.get("values"):
+            return None
+        users = {}
+        for row in result.get("values", []):
+            if len(row) >= 3:
+                username = row[0].strip()
+                users[username] = {
+                    "password_hash": row[1],
+                    "modules": json.loads(row[2]),
+                }
+        return users if users else None
+    except Exception as e:
+        print(f"Error loading users from Sheets: {e}")
+        return None
+
+
+def _save_users_to_sheets(users: dict):
+    """Guarda usuarios en Google Sheets."""
+    try:
+        from services.sheets_tracking import _api_request
+        _ensure_auth_sheet()
+        # Clear existing data
+        rng = urllib.parse.quote(f"{_AUTH_SHEET}!A2:C20")
+        _api_request("POST", f"values/{rng}:clear")
+        # Write all users
+        rows = []
+        for username, data in users.items():
+            rows.append([username, data["password_hash"], json.dumps(data["modules"])])
+        if rows:
+            rng = urllib.parse.quote(f"{_AUTH_SHEET}!A2")
+            _api_request("PUT", f"values/{rng}?valueInputOption=RAW", {"values": rows})
+    except Exception as e:
+        print(f"Error saving users to Sheets: {e}")
+
+
 def _load_users() -> dict:
-    """Lee usuarios desde users.json. Si no existe, lo crea con defaults."""
+    """Lee usuarios desde Sheets, con fallback a JSON local, con fallback a defaults."""
+    # Try Sheets first
+    users = _load_users_from_sheets()
+    if users:
+        return users
+    # Fallback to local JSON
     if os.path.exists(_USERS_FILE):
         with open(_USERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
+    # Initialize with defaults and save to Sheets
     _save_users(_DEFAULT_USERS)
     return _DEFAULT_USERS.copy()
 
 
 def _save_users(users: dict):
-    """Guarda usuarios en users.json."""
-    with open(_USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2, ensure_ascii=False)
+    """Guarda usuarios en Sheets y en JSON local como backup."""
+    _save_users_to_sheets(users)
+    try:
+        with open(_USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 # Load on import
