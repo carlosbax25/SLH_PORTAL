@@ -658,3 +658,12 @@ body {
 /* ===== Compact table fix ===== */
 .data-table { width: 100%; }
 .data-table th, .data-table td { font-size: 0.8rem; padding: 10px 8px; }
+
+
+/* ===== Disabled Module (RBAC) ===== */
+.disabled-module {
+    opacity: 0.4;
+    filter: grayscale(100%);
+    pointer-events: none;
+    cursor: default;
+}

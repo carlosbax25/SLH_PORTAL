@@ -5,3 +5,4 @@ credentials.json
 generated_demandas/*.docx
 generated_demandas/_tracking.json
 .kiro/
+users.json

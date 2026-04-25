@@ -18,6 +18,8 @@
     <div class="cards-grid">
         {% for process in processes %}
         {% if process.status.value == 'coming_soon' %}
+        {% set has_access = process.slug in session.get('modules', []) %}
+        {% if has_access %}
         <div class="process-card coming-soon" style="--accent: #6c757d;" data-delay="{{ loop.index0 }}">
             <div class="card-header">
                 <div class="card-icon-wrapper muted">
@@ -35,6 +37,26 @@
             </div>
         </div>
         {% else %}
+        <div class="process-card coming-soon disabled-module" style="--accent: #6c757d;" data-delay="{{ loop.index0 }}">
+            <div class="card-header">
+                <div class="card-icon-wrapper muted">
+                    <i class="fas {{ process.icon }}"></i>
+                </div>
+                <span class="card-status" style="background: #dc3545;">
+                    Sin acceso
+                </span>
+            </div>
+            <h3 class="card-title">{{ process.name }}</h3>
+            <p class="card-description">{{ process.description }}</p>
+            <div class="coming-soon-banner">
+                <i class="fas fa-lock"></i>
+                <span>Sin acceso</span>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        {% set has_access = process.slug in session.get('modules', []) %}
+        {% if has_access %}
         <a href="{{ url_for('process.detail', slug=process.slug) }}" class="card-link">
             <div class="process-card" style="--accent: {{ process.color_accent }};" data-delay="{{ loop.index0 }}">
                 <div class="card-glow"></div>
@@ -56,6 +78,28 @@
                 </div>
             </div>
         </a>
+        {% else %}
+        <div class="card-link disabled-module">
+            <div class="process-card" style="--accent: {{ process.color_accent }};" data-delay="{{ loop.index0 }}">
+                <div class="card-header">
+                    <div class="card-icon-wrapper">
+                        <i class="fas {{ process.icon }}"></i>
+                    </div>
+                    <span class="card-status" style="background: #dc3545;">
+                        Sin acceso
+                    </span>
+                </div>
+                <h3 class="card-title">{{ process.name }}</h3>
+                <p class="card-description">{{ process.description }}</p>
+                <div class="card-footer">
+                    <span class="card-time">
+                        <i class="fas fa-gavel"></i> {{ process.category }}
+                    </span>
+                    <span class="card-arrow"><i class="fas fa-lock"></i></span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         {% endif %}
         {% endfor %}
     </div>

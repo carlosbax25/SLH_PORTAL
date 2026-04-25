@@ -2,12 +2,13 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from controllers.main_controller import main_bp
 from controllers.process_controller import process_bp
 from controllers.juridica_controller import juridica_bp
 from controllers.cobranza_controller import cobranza_bp
 from security.middleware import SecurityMiddleware
+from security.auth import auth_bp, ROUTE_MODULE_MAP
 
 
 def create_app(config_name: str = 'development') -> Flask:
@@ -22,10 +23,27 @@ def create_app(config_name: str = 'development') -> Flask:
     SecurityMiddleware.init_app(app)
 
     # Registrar Blueprints
+    app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(process_bp)
     app.register_blueprint(juridica_bp)
     app.register_blueprint(cobranza_bp)
+
+    # Protección global de rutas
+    @app.before_request
+    def check_auth():
+        path = request.path
+        if path.startswith("/login") or path.startswith("/logout") or path.startswith("/static"):
+            return None
+        if not session.get("username"):
+            return redirect(url_for("auth.login"))
+        for prefix, module in ROUTE_MODULE_MAP.items():
+            if path.startswith(prefix):
+                if module not in session.get("modules", []):
+                    flash("No tiene permisos para acceder a este módulo")
+                    return redirect(url_for("main.dashboard"))
+                break
+        return None
 
     # Manejadores de error
     @app.errorhandler(404)
