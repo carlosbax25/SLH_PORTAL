@@ -6,6 +6,7 @@ from services.cobranza_service import (
     load_cobranza_tracking, save_notification, can_send_notif2, days_until_notif2,
     _send_cobro_email, validate_email,
 )
+from services.fiorentti_service import get_fiorentti_clients, _send_fiorentti_aviso, _build_fiorentti_html
 from security.middleware import SecurityMiddleware
 
 cobranza_bp = Blueprint("cobranza", __name__, url_prefix="/cobranza")
@@ -15,6 +16,64 @@ cobranza_bp = Blueprint("cobranza", __name__, url_prefix="/cobranza")
 def index():
     return redirect(url_for('process.detail', slug='cobranza'))
 
+
+@cobranza_bp.route("/fiorentti")
+def fiorentti():
+    try:
+        clients = get_fiorentti_clients()
+    except Exception as e:
+        clients = []
+    clients.sort(key=lambda c: c["mora"] or 0, reverse=True)
+    total = len(clients)
+    mora_total = sum(c["mora"] for c in clients if c["mora"])
+    return render_template("cobranza/fiorentti.html", clients=clients, total=total, mora_total=mora_total)
+
+
+@cobranza_bp.route("/fiorentti/preview-aviso", methods=["POST"])
+def fiorentti_preview_aviso():
+    """Genera el HTML del aviso para previsualización — NO envía nada."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Datos requeridos"}), 400
+
+    propietario = SecurityMiddleware.sanitize_input(data.get("propietario", ""))
+    torre       = SecurityMiddleware.sanitize_input(data.get("torre", ""))
+    apto        = SecurityMiddleware.sanitize_input(data.get("apto", ""))
+    mora        = data.get("mora", 0)
+
+    subject, html = _build_fiorentti_html(propietario, torre, apto, mora)
+
+    # El logo viene embebido como cid: en el email, en la preview lo reemplazamos
+    # por la URL estática para que se vea en el iframe
+    html_preview = html.replace('src="cid:logo"', 'src="/static/LOGO-SLH.png"')
+
+    return jsonify({"subject": subject, "html": html_preview})
+
+
+@cobranza_bp.route("/fiorentti/enviar-aviso", methods=["POST"])
+def fiorentti_enviar_aviso():
+    """Envía (o simula) el aviso pre-jurídico individual de Fiorentti."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Datos requeridos"}), 400
+
+    propietario = SecurityMiddleware.sanitize_input(data.get("propietario", ""))
+    torre       = SecurityMiddleware.sanitize_input(data.get("torre", ""))
+    apto        = SecurityMiddleware.sanitize_input(data.get("apto", ""))
+    email       = SecurityMiddleware.sanitize_input(data.get("email", ""))
+    mora        = data.get("mora", 0)
+
+    if not email:
+        return jsonify({"error": "Este propietario no tiene correo registrado"}), 400
+
+    result = _send_fiorentti_aviso(email, propietario, torre, apto, mora)
+
+    from services.fiorentti_service import SEND_DISABLED, TEST_EMAIL as FTEST
+    if result:
+        destino = FTEST if SEND_DISABLED else email
+        return jsonify({"success": True, "message": f"Aviso enviado a {destino}"})
+    else:
+        return jsonify({"error": "Error al enviar el correo. Revisa la configuración SMTP."}), 500
 
 @cobranza_bp.route("/notificaciones")
 def notificaciones():
